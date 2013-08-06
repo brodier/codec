@@ -4,8 +4,6 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'codec/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "codec"
-  spec.version       = Codec::VERSION
   spec.authors       = ["Bernard Rodier"]
   spec.email         = ["bernard.rodier@gmail.com"]
   spec.description   = %q{Generic Coder Decoder Tool}
@@ -13,11 +11,12 @@ Gem::Specification.new do |spec|
   spec.homepage      = ""
   spec.license       = "MIT"
 
-  spec.files         = `git ls-files`.split($/)
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
+  spec.files         = `git ls-files`.split($/)
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  spec.name          = "codec"
   spec.require_paths = ["lib"]
-
+  spec.version       = Codec::VERSION
   spec.add_development_dependency "bundler", "~> 1.3"
   spec.add_development_dependency "rake"
 end
