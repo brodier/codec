@@ -1,9 +1,9 @@
 require 'log4r'
 require 'codec/version'
-require 'codec/fields'
+require 'codec/field'
 require 'codec/exceptions'
 require 'codec/base'
-# require 'codec/fix'
+require 'codec/fix'
 # require 'codec/packed'
 # require 'codec/prefixed'
 # require 'codec/composed'
@@ -21,8 +21,8 @@ module Codec
   end
   
   
-  def self.register_protocol(ProtocolClass)
-    protocols << ProtocolClass
+  def self.register_protocol(protocol)
+    protocols << protocol
     return protocols
   end
 

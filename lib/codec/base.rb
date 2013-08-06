@@ -12,12 +12,12 @@ module Codec
       return f
     end
     
-    def parse_with_length(buf,length)
+    def decode_with_length(buf,length)
       init_data(buf,length)
       return build_field,@remain
     end
     
-    def parse(buf)
+    def decode(buf)
       init_data(buf,@length)
       return build_field,@remain
     end    
