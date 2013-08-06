@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["bernard.rodier@gmail.com"]
   spec.description   = %q{Generic Coder Decoder Tool}
   spec.summary       = %q{This Gem provide class that permit to instantiate Codec to parse or build any protocol}
-  spec.homepage      = ""
+  spec.homepage      = "https://github.com/brodier/codec"
   spec.license       = "MIT"
 
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
