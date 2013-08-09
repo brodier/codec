@@ -32,18 +32,20 @@ module Codec
   
   end
 
-
-  
-  class Numstr < Base
+  class Numasc < Base
     def build_field
       f = Field.new(@id)
-	  # Force conversion of ebcdic number to ascii number
-	  if IsEbcdic(@data)
-	    @data = Ebcdic2Ascii(@data)
-	  end
-	  
       f.set_value(@data.to_i)
       return f
+    end
+    
+    def encode(field)
+      out = field.get_value.to_s
+      if @length > 0
+        out = out.rjust(@length,"0")
+        raise TooLongDataException if out.length > @length
+      end
+      return out
     end
   end
 
