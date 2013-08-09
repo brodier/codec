@@ -4,7 +4,7 @@ require 'codec/field'
 require 'codec/exceptions'
 require 'codec/base'
 require 'codec/fix'
-# require 'codec/packed'
+require 'codec/packed'
 # require 'codec/prefixed'
 # require 'codec/composed'
 
