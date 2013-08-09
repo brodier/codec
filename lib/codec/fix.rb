@@ -10,6 +10,26 @@ module Codec
       f.set_value(res)
       return f
     end
+    
+    def encode(field)
+      val = field.get_value.to_i
+      out = ""
+      while val > 0
+        out << (val % 256).chr
+        val /= 256
+      end
+      
+      # handle length if defined
+      if @length > 0
+        while out.length < @length
+          out << 0.chr
+        end
+        out = out[0,@length]
+      end
+      
+      return out.reverse
+    end
+  
   end
 
 
