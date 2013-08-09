@@ -52,12 +52,18 @@ module Codec
   class String < Base
     def build_field
       f = Field.new(@id)
-	  if IsEbcdic(@data)
-	    @data = Ebcdic2Ascii(@data)
-	  end
       f.set_value(@data)
       return f
     end
+    
+    def encode(f)
+      out = f.get_value
+      if @length >  0
+        raise TooLongDataException if out.length > @length
+        out = out.ljust(@length," ")
+      end
+      return out
+    end    
   end
 
   class Binary < Base
@@ -66,5 +72,14 @@ module Codec
       f.set_value(@data.unpack("H*").first.upcase)
       return f
     end
+    
+    def encode(f)
+      out = [f.get_value].pack("H*")
+      if @length >  0
+        raise TooLongDataException if out.length > @length
+        out = out.ljust(@length,0.chr)
+      end
+      return out
+    end 
   end
 end
