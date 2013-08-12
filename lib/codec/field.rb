@@ -22,6 +22,7 @@ module Codec
     def set_value(value)
 	    raise "Error can not set value that is instance of Array" if value.kind_of? Array
       @value = value
+      return self
     end
     
     def add_sub_field(sf)
