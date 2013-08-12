@@ -1,9 +1,9 @@
 module Codec
   class Numbin < Base
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
       res = 0
-      @data.unpack("C*").each{ |ubyte|
+      buf[0,length].unpack("C*").each{ |ubyte|
         res *= 256
         res += ubyte
       }
@@ -33,9 +33,9 @@ module Codec
   end
 
   class Numasc < Base
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(@data.to_i)
+      f.set_value(buf[0,length].to_i)
       return f
     end
     
@@ -50,9 +50,9 @@ module Codec
   end
 
   class String < Base
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(@data)
+      f.set_value(buf[0,length])
       return f
     end
     
@@ -67,9 +67,9 @@ module Codec
   end
 
   class Binary < Base
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(@data.unpack("H*").first.upcase)
+      f.set_value(buf[0,length].unpack("H*").first.upcase)
       return f
     end
     

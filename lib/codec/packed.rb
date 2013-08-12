@@ -13,8 +13,8 @@ module Codec
     end	
     
     def decode_with_length(buf,length)
-      init_data(buf,get_pck_length(length))
-      return build_field,@remain
+      l = eval_length(buf,get_pck_length(length))
+      return build_field(buf,l),buf[l,buf.length]
     end
     
     def decode(buf)
@@ -23,9 +23,9 @@ module Codec
   end
 
   class Numpck < Packed
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(@data.unpack("H*").first.to_i)
+      f.set_value(buf[0,length].unpack("H*").first.to_i)
       return f
     end
     
@@ -43,9 +43,10 @@ module Codec
   end
   
   class Strpck < Packed
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
-      val = @data.unpack("H*").first
+      val = buf[0,length].unpack("H*").first
+      # TODO : handle odd length for packed field with prefixed length
       val.chop! if @length.odd?
       f.set_value(val)
       return f

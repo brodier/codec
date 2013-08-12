@@ -32,13 +32,13 @@ module Codec
 	    end
     end
 	
-	  def build_field
+	  def build_field(buf,length)
 	    begin
-	      f,r = decode(@data)
+	      f,r = decode(buf[0,length])
 	    rescue ErrorBufferUnderflow => e
 	      raise ParsingException, e.message
 	    end
-	    # log error if r != ""
+	    Logger.error "Error remain data in Prefixedlength" if r != ""
 	    return f
 	  end
     
@@ -84,6 +84,13 @@ module Codec
         return f,remain
 	    end
 	  end
+    
+    def encode(field)
+      # TODO : to implement
+      # encode content
+      # add length field to header
+      # encode header
+    end
   end  
 
   class Headerfulllength < Headerlength

@@ -1,7 +1,6 @@
 require_relative '../../test_helper'
 
 describe Codec::Prefixedlength do
-
   before do
     @length = Codec::Numasc.new('length',3)
     @content = Codec::String.new('content',0)

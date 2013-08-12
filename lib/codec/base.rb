@@ -6,33 +6,31 @@ module Codec
         @id = id
     end
 
-    def build_field
+    def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(@data)
+      f.set_value(buf[0,length])
       return f
     end
     
     def decode_with_length(buf,length)
-      init_data(buf,length)
-      return build_field,@remain
+      l = eval_length(buf,length)
+      return build_field(buf,l),buf[l,buf.length]
     end
     
     def decode(buf)
-      init_data(buf,@length)
-      return build_field,@remain
+      l = eval_length(buf,@length)
+      return build_field(buf,l),buf[l,buf.length]
     end    
     
-    def init_data(buf,length)
+    def eval_length(buf,length)
 	    length = 0 if length.nil?
       if(length != 0)
 	      if buf.length < length
 	        raise BufferUnderflow, "Not enough data for parsing #{@id} (#{length}/#{buf.length})"
 	      end
-        @data = buf[0,length]
-        @remain = buf[length,buf.length]
+        return length
       else
-        @data = buf
-        @remain = ""
+        return buf.length
       end
     end
     
