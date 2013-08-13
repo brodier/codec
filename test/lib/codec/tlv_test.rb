@@ -18,9 +18,46 @@ describe Codec::Tlv do
     subject.decode(@buffer).first.
       must_equal(@field)
   end
+
+  it "must generate buffer from composed field" do
+    subject.encode(@field).must_equal(@buffer)
+  end  
 end
 
+describe Codec::Tlv do
+  subject { Codec::Tlv.new('Tlv', Codec::Numbin.new('*',1), 
+              Codec::Binary.new('*',1), Codec::Binary.new('*',0))
+          }
+  
+  before do
+    tvr_codec = Codec::BaseComposed.new("Tvr")
+    one_byte_codec = Codec::Binary.new("*",1)
+    (1..5).each do |i|
+      tvr_codec.add_sub_codec("BIT#{i}",one_byte_codec)
+    end
+    subject.add_sub_codec('95',tvr_codec)
 
+    @buffer = ["950580000000009C0100"].pack("H*")
+    @field = Codec::Field.from_array('Tlv',
+      [['95',[['BIT1','80'],['BIT2','00'],['BIT3','00'],
+       ['BIT4','00'],['BIT5','00']]],['9C','00']])
+  end
+
+  it "must be a Tlv codec" do
+    subject.must_be_instance_of(Codec::Tlv)
+  end
+  
+  it "must generate composed field from buffer" do
+    subject.decode(@buffer).first.
+      must_equal(@field)
+  end
+
+  it "must generate buffer from composed field" do
+    subject.encode(@field).must_equal(@buffer)
+  end  
+end
+    
+    
 describe Codec::Bertlv do
   subject { Codec::Bertlv.new('Bertlv') }
   

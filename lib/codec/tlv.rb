@@ -12,6 +12,22 @@ module Codec
       Logger.warn("Remain data in a tlv buffer :[#{r.unpack("H*").first}]") if r.length > 0
       return f,buf[l,buf.length]
     end
+    
+    def encode(field)
+      out = ""
+      fields = field.get_value
+      fields.each do |id,sf|
+        out += @tag_codec.encode(Field.new(id,id))
+        if @subCodecs[id]
+          content = @subCodecs[id].encode(sf)
+          length_buffer = @length_codec.encode(Field.new('*',content.length))
+          out += length_buffer + content
+        else
+          out += super(sf)
+        end
+      end
+      return out
+    end
   
     def decode(buffer)
       msg = Field.new(@id)
