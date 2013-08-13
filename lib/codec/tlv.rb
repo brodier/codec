@@ -49,8 +49,9 @@ module Codec
   end
   
   class Bertlv < Base
-    def initialize(att)
-      @id = att['id']
+    def initialize(id)
+      @id = id
+      @length = 0
     end
   
     def read_length

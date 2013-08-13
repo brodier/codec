@@ -8,9 +8,9 @@ module Codec
   end
   
   class Field
-    def initialize(id="*")
+    def initialize(id="*",value="")
       @id = (id.nil? ? "*" : id)
-      @value = ""
+      @value = value
     end
     
     def self.from_array(id,fields_array)
