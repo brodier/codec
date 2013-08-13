@@ -34,17 +34,17 @@ module Codec
       end
     end
     
-    def add_subparser(id_field,parser)
-	    if parser.nil?
-	      raise InitializeException, "Invalid codec reference in subparser #{id_field} for codec #{@id}"
+    def add_sub_codec(id_field,codec)
+	    if codec.nil?
+	      raise InitializeException, "Invalid codec reference in subcodec #{id_field} for codec #{@id}"
 	    end
-      if @subParsers.kind_of? Hash
-        @subParsers[id_field] = parser 
+      if @subCodecs.kind_of? Hash
+        @subCodecs[id_field] = codec 
       end
     end 
 	
-	  def get_sub_parsers
-	    return @subParsers
+	  def get_sub_codecs
+	    return @subCodecs
 	  end
   end
 end
