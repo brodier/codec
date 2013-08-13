@@ -6,7 +6,7 @@ require 'codec/base'
 require 'codec/fix'
 require 'codec/packed'
 require 'codec/prefix'
-# require 'codec/composed'
+require 'codec/composed'
 
 
 module Codec
