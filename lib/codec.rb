@@ -7,7 +7,8 @@ require 'codec/fix'
 require 'codec/packed'
 require 'codec/prefix'
 require 'codec/composed'
-
+require 'codec/bitmap'
+require 'codec/tlv'
 
 module Codec
   

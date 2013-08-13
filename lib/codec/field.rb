@@ -12,7 +12,24 @@ module Codec
       @id = (id.nil? ? "*" : id)
       @value = ""
     end
-
+    
+    def self.from_array(id,fields_array)
+      f = Field.new(id)  
+      fields_array.each do |id,value|
+        if value.kind_of?(Array)
+          sf = Field.from_array(id,value)
+        else
+          sf = Field.new(id) ; sf.set_value(value)
+        end
+        f.add_sub_field(sf)
+      end
+      return f
+    end
+    
+    def ==(other)
+      (@id == other.get_id && @value == other.get_value)
+    end
+    
     def get_id ; @id; end
     
     def set_id id ; @id = id ; end
