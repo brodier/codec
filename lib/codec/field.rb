@@ -19,7 +19,7 @@ module Codec
         if value.kind_of?(Array)
           sf = Field.from_array(id,value)
         else
-          sf = Field.new(id) ; sf.set_value(value)
+          sf = Field.new(id,value)
         end
         f.add_sub_field(sf)
       end
