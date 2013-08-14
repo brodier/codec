@@ -38,9 +38,14 @@ describe Codec::Headerlength do
     @header.add_sub_codec('H_TAG',tag)
     @header.add_sub_codec('H_TLV',Codec::Prefixedlength.new('*',length,tlv))
     @content = Codec::String.new('CONTENT',0)
-    @field = Codec::Field.from_array('Test_Headerlength',
-      [['HEADER', [['H_TAG','AA'],['H_TLV',[['01',25],['02',6]]]]],
-      ['CONTENT','STRING']])
+    len = 6
+    field_array = [['HEADER', [['H_TAG','AA'],['H_TLV',[['01',25],['02',len]]]]],
+      ['CONTENT','STRING']]
+    @field_with_length = Codec::Field.from_array('Test_Headerlength',field_array)
+    len = 0
+    field_array = [['HEADER', [['H_TAG','AA'],['H_TLV',[['01',25],['02',len]]]]],
+      ['CONTENT','STRING']]
+    @field_without_length = Codec::Field.from_array('Test_Headerlength',field_array)
     @buffer = ["AA06010119020106","STRING"].pack("H*A*")
   end
 
@@ -51,7 +56,7 @@ describe Codec::Headerlength do
   end
   
   it "must decode a field with computed value" do
-    subject.decode(@buffer).first.must_equal(@field)
+    subject.decode(@buffer).first.must_equal(@field_with_length)
   end
   
   it "must also return remaining data" do
@@ -59,6 +64,6 @@ describe Codec::Headerlength do
   end
 
   it "must encode buffer with composed field [header,content]" do
-    subject.encode(@field).must_equal(@buffer)
+    subject.encode(@field_without_length).must_equal(@buffer)
   end
 end
