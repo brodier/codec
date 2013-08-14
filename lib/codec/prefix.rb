@@ -103,9 +103,34 @@ module Codec
   end  
 
   class Headerfulllength < Headerlength
-    def initialize(id,header,content,length_path)
-      super(id,header,content,length_path)
-    end
+    # TODO : to implement
   end
   
+  class Tagged < Base
+    def initialize(id,tag_codec)
+      @subCodecs = {}
+      @tag_codec = tag_codec
+	    @id = id
+    end
+    
+    def decode(buffer)
+      tag,buf = @tag_codec.decode(buffer)
+      if @subCodecs[tag.get_value.to_s].nil?
+        raise ParsingException, "Unknown tag #{tag.get_value.to_s} for #{@id} decoder"
+      end
+      f,buf = @subCodecs[tag.get_value.to_s].decode(buf)
+      f.set_id(tag.get_value.to_s)
+      return f,buf
+    end
+    
+    def encode(field)
+      head = Field.new(@tag_codec.id, field.get_id)
+      out = @tag_codec.encode(head)
+      if @subCodecs[field.get_id].nil?
+        raise EncodingException, "Unknown tag #{field.get_id} for #{@id} encoder"
+      end
+      out += @subCodecs[field.get_id].encode(field)
+      return out
+    end
+  end
 end

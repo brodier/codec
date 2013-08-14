@@ -67,3 +67,38 @@ describe Codec::Headerlength do
     subject.encode(@field_without_length).must_equal(@buffer)
   end
 end
+
+describe Codec::Tagged do
+  before do
+    @field1 = Codec::Field.new('01',12)
+    @field2 = Codec::Field.new('02','ABC')
+    @buffer1 = "01012"
+    @buffer2 = "02ABC"
+  end
+
+  subject { c = Codec::Tagged.new('Test_tagged',Codec::String.new('*',2)) 
+            c.add_sub_codec('01',Codec::Numasc.new('*',3))
+            c.add_sub_codec('02',Codec::String.new('*',3))
+            c
+          }
+  
+  it "must be a Tagged codec" do
+    subject.must_be_instance_of(Codec::Tagged)
+  end
+  
+  it "must generate a field with computed value" do
+    subject.decode(@buffer1).first.must_equal(@field1)
+  end
+  
+  it "must generate a field with computed value" do
+    subject.decode(@buffer2).first.must_equal(@field2)
+  end  
+
+  it "must encode value prefixed with length" do
+    subject.encode(@field1).must_equal(@buffer1)
+  end
+
+  it "must encode value prefixed with length" do
+    subject.encode(@field2).must_equal(@buffer2)
+  end
+end
