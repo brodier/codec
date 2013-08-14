@@ -56,7 +56,28 @@ describe Codec::Tlv do
     subject.encode(@field).must_equal(@buffer)
   end  
 end
+
+
+describe Codec::Tlv do
+  subject {
+    tag = Codec::Binary.new('T',1)
+    length = Codec::Numbin.new('L',1)
+    value = Codec::Numbin.new('V',0)
+    Codec::Tlv.new('TAG',length,tag,value) }
+    before do
+      @buffer = ["9501009C010181020200"].pack("H*")
+      @field = Codec::Field.from_array('TAG',
+        [['95',0],['9C',1],['81',512]])          
+    end
     
+    it "must decode TLV buffer to field" do
+      subject.decode(@buffer).first.must_equal(@field)
+    end
+    
+    it "must encode TLV field to buffer" do
+      subject.encode(@field).must_equal(@buffer)
+    end
+end
     
 describe Codec::Bertlv do
   subject { Codec::Bertlv.new('Bertlv') }

@@ -16,10 +16,10 @@ module Codec
     def encode(field)
       out = ""
       fields = field.get_value
-      fields.each do |id,sf|
-        out += @tag_codec.encode(Field.new(id,id))
-        if @subCodecs[id]
-          content = @subCodecs[id].encode(sf)
+      fields.each do |sf|
+        out += @tag_codec.encode(Field.new('*',sf.get_id))
+        if @subCodecs[sf.get_id]
+          content = @subCodecs[sf.get_id].encode(sf)
           length_buffer = @length_codec.encode(Field.new('*',content.length))
           out += length_buffer + content
         else
@@ -164,9 +164,9 @@ module Codec
       
       while subfields.size > 0
         subfield = subfields.shift
-        out += tag_encode(subfield.first)
+        out += tag_encode(subfield.get_id)
         # TODO : Handle value that is not String
-        value = value_encode(subfield.last.get_value)
+        value = value_encode(subfield.get_value)
         out += length_encode(value.length)
         out += value
       end

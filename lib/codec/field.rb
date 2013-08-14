@@ -14,27 +14,29 @@ module Codec
     end
     
     def self.from_array(id,fields_array)
-      f = Field.new(id)  
-      fields_array.each do |id,value|
-        if value.kind_of?(Array)
-          sf = Field.from_array(id,value)
-        else
-          sf = Field.new(id,value)
-        end
-        f.add_sub_field(sf)
-      end
+      f = Field.new(id,fields_array)  
       return f
     end
     
     def ==(other)
-      (@id == other.get_id && @value == other.get_value)
+      (@id == other.id && @value == other.value)
     end
     
     def get_id ; @id; end
     
     def set_id id ; @id = id ; end
     
-    def get_value ; @value; end
+    def get_value 
+      if @value.kind_of?(Array)
+        v = []
+        @value.each{|id,value|
+          v << Field.new(id,value)
+        }
+        return v
+      else
+        return @value
+      end
+    end
     
     def set_value(value)
 	    raise "Error can not set value that is instance of Array" if value.kind_of? Array
@@ -45,7 +47,7 @@ module Codec
     def add_sub_field(sf)
       @value = [] if @value == ""
 	    raise "Add impossible on not Array valued field" unless @value.kind_of? Array
-	    @value << [sf.get_id,sf]
+	    @value << [sf.id,sf.value]
     end
     
 	  def get_sf_recursivly(ids)
@@ -59,11 +61,20 @@ module Codec
 	  	end
 	  end
 	  
+    def search(path,separator='.')
+      get_sf_recursivly(path.split(separator))
+    end
+    
 	  def get_deep_field(path,separator='.')
 	  	get_sf_recursivly(path.split(separator))
 	  end
     
-	  def get_sub_field(id)
+    def set_deep_field(sf,path,separator='.')
+      v = sf.value
+      # TODO : set v in good place in @value
+    end
+	  
+    def get_sub_field(id)
 	    sf_rec = get_sub_fields(id)
 	    if sf_rec.nil?
 	      return NilField.new
@@ -79,8 +90,12 @@ module Codec
 	    sf_rec = @value.select{|v| v.first == id}.collect{|v| v.last}
       if sf_rec == []
         return NilField.new
-      else
-        return sf_rec
+      elsif sf_rec.size == 1
+        return [Field.new(id,sf_rec.first)]
+      else 
+        sfs = []
+        sf_rec.each{|v| sfs << Field.new(id,v)}
+        return sfs
       end
     end
   
@@ -95,6 +110,7 @@ module Codec
 	   else
 	     tab + @id + ": " + @value.to_s + "\n"
 	   end
-   end   
+   end
+   attr_reader :id,:value   
   end
 end

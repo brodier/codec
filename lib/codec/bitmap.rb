@@ -44,28 +44,28 @@ module Codec
     def encode(field)
       fields = field.get_value 
       encoded_fields = []
-      fields_list = fields.collect{|id,sf| id.to_i}
+      fields_list = fields.collect{|sf| sf.get_id.to_i}
       # Add field for bitmaps
       bitmap_fields = @num_extended_bitmaps[0,(fields_list.last - 1) / bitmap_length]
       fields_list +=  bitmap_fields
-      fields += bitmap_fields.collect {|id| [id,nil]}
-      fields.sort!{|a,b| a.first.to_i <=> b.first.to_i}
+      fields += bitmap_fields.collect {|id| Field.new(id)}
+      fields.sort!{|a,b| a.get_id.to_i <=> b.get_id.to_i}
       # Encode first bitmap
       out = encode_bitmap(fields_list,0)
       bitmap_index = 1
-      fields.each do |id,sf|
-        codec = @subCodecs[id]
-        if @num_extended_bitmaps.include?(id)
+      fields.each do |sf|
+        codec = @subCodecs[sf.get_id]
+        if @num_extended_bitmaps.include?(sf.get_id)
           out += encode_bitmap(fields_list,bitmap_index)
           bitmap_index += 1
         elsif codec.nil?
-          raise EncodingException, "unknown codec for subfield #{id}"
-        elsif encoded_fields.include?(id.to_i)
-          raise EncodingException, "Multiple subfield #{id} is invalid for Codec::Bitmap"
+          raise EncodingException, "unknown codec for subfield #{sf.get_id}"
+        elsif encoded_fields.include?(sf.get_id.to_i)
+          raise EncodingException, "Multiple subfield #{sf.get_id} is invalid for Codec::Bitmap"
         else
           out += codec.encode(sf)
         end
-        encoded_fields << id.to_i
+        encoded_fields << sf.get_id.to_i
       end
       return out
     end

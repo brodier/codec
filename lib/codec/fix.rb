@@ -31,6 +31,7 @@ module Codec
         end
         out = out[0,maxlength]
       end
+      out = 0.chr if out == ""
       return out.reverse
     end
   end

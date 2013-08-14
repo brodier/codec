@@ -10,6 +10,7 @@ describe Codec::Bitmap do
     subject.add_sub_codec('3', Codec::String.new('*',3))
     subject.add_sub_codec('15', Codec::Numbin.new('*',2))
     @buffer = ["1100000000000010","012ABCDE","0012"].pack("B*A*H*")
+    @field = Codec::Field.from_array('Bitmap',[['1',12],['2','ABCDE'],['15',18]])
   end
 
   it "must be a BaseComposed codec" do
@@ -17,10 +18,7 @@ describe Codec::Bitmap do
   end
   
   it "must generate composed field from buffer" do
-    subject.decode(@buffer).first.
-      get_value.collect{ |id,f| 
-        [id,f.get_value]
-      }.must_equal([['1',12],['2',"ABCDE"],['15',18]])
+    subject.decode(@buffer).first.must_equal(@field)
   end
 
 end
@@ -37,9 +35,10 @@ describe Codec::Bitmap do
     subject.add_sub_codec('18', Codec::Numbin.new('*',2))
     subject.add_sub_codec('21', Codec::String.new('*',5))
     @buffer_1 = ["11000000000000000100100000000000","012","0012","ABCDE"].pack("B*A*H*A*")
-    @buffer2 = ["0110000000000000","012","ABCDE"].pack("B*A3A5")
+    @buffer_2 = ["0110000000000000","012","ABCDE"].pack("B*A3A5")
     @field_1 = Codec::Field.from_array('MultipleBitmap',[['2',12],['18',18],['21',"ABCDE"]])
-    @field_2 = Codec::Field.from_array('MultipleBitmap',[['2',12],['41',18],['21',"ABCDE"]])
+    @field_2 = Codec::Field.from_array('MultipleBitmap',[['2',12],['3','ABCDE']])
+    @field_3 = Codec::Field.from_array('MultipleBitmap',[['2',12],['41',18],['21',"ABCDE"]])
   end
 
   it "must be a Bitmap codec" do
@@ -47,17 +46,11 @@ describe Codec::Bitmap do
   end
   
   it "must generate composed field from buffer with extended bitmap" do
-    subject.decode(@buffer_1).first.
-      get_value.collect{ |id,f| 
-        [id,f.get_value]
-      }.must_equal([['2',12],['18',18],['21',"ABCDE"]])
+    subject.decode(@buffer_1).first.must_equal(@field_1)
   end
 
   it "must generate composed field from buffer without extended bitmap" do
-    subject.decode(@buffer2).first.
-      get_value.collect{ |id,f| 
-        [id,f.get_value]
-      }.must_equal([['2',12],['3',"ABCDE"]])
+    subject.decode(@buffer_2).first.must_equal(@field_2)
   end
   
   it "must generate buffer from composed field" do
@@ -65,7 +58,7 @@ describe Codec::Bitmap do
   end
 
   it "must raise Encoding exception if subfield is unknown" do
-    proc { subject.encode(@field_2) }.must_raise(Codec::EncodingException)
+    proc { subject.encode(@field_3) }.must_raise(Codec::EncodingException)
   end  
   
 end
