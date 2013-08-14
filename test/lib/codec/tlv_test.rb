@@ -75,4 +75,8 @@ describe Codec::Bertlv do
     subject.decode(@tlv_buf).first.
       must_equal(@field)
   end
+  
+  it "must generate buffer from composed field" do
+    subject.encode(@field).must_equal(@tlv_buf)
+  end
 end

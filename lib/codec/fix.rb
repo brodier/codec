@@ -13,23 +13,26 @@ module Codec
     
     def encode(field)
       val = field.get_value.to_i
+      out = Numbin.numbin(val,@length)
+      return out
+    end
+    
+    def self.numbin(number,maxlength)
       out = ""
-      while val > 0
-        out << (val % 256).chr
-        val /= 256
+      while number > 0
+        out << (number % 256).chr
+        number /= 256
       end
       
       # handle length if defined
-      if @length > 0
-        while out.length < @length
+      if maxlength > 0
+        while out.length < maxlength
           out << 0.chr
         end
-        out = out[0,@length]
+        out = out[0,maxlength]
       end
-      
       return out.reverse
     end
-  
   end
 
   class Numasc < Base

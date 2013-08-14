@@ -86,10 +86,17 @@ module Codec
 	  end
     
     def encode(field)
-      # TODO : to implement
       # encode content
-      # add length field to header
+      content = @value_codec.encode(field.get_sub_field(@value_codec.id))
+      length_field = field.get_deep_field(@path,@separator)
+      if length_field.nil?
+        raise EncodingException,"Length field is not present in header for encoding #{@id} => #{field.to_yaml}"
+      end
+      # update length field in header
+      length_field.set_value(content.length)
       # encode header
+      header =  @length_codec.encode(field.get_sub_field(@length_codec.id))
+      return header + content
     end
   end  
 

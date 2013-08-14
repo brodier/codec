@@ -69,55 +69,83 @@ module Codec
       @id = id
       @length = 0
     end
-  
-    def read_length
-     b = @data.slice!(0).getbyte(0)
+    
+    def tag_decode(buffer)
+      buf = buffer.dup
+      # removing trailling bytes
+      begin ; b = buf.slice!(0).getbyte(0) ; end while (b == 0 || b == 255)
+      tag = b.chr
+      if (b & 0x1F == 0x1F) 
+        begin 
+          nb = buf.slice!(0).getbyte(0)
+    	    tag += nb.chr
+    	  end while nb & 0x80 == 0x80
+      end
+      return tag.unpack("H*").first.upcase, buf
+    end
+
+    def tag_encode(tag)
+      buf = [tag].pack("H*")
+      check_tag, remain = tag_decode(buf)
+      if tag != check_tag || remain != ""
+        raise EncodingException, "Invalid BER tag [#{tag}]"
+      end
+      return buf
+    end
+    
+    def length_decode(buffer)
+     buf = buffer.dup
+     b = buf.slice!(0).getbyte(0)
      if b & 0x80 == 0x80
-       ll = b & 0x7F 
-       lb = @data[0,ll]
-       @data = @data[ll,@data.length]
+       # Compute lenght of encoding length sample if first byte is 83 then lenth is encode 
+       # on 3 bytes
+       loencl = b & 0x7F 
+       lb = buf[0,loencl]
+       buf = buf[loencl,buf.length]
        length = 0
        while(lb.length > 0)
          length *= 256
     	   length += lb.slice!(0).getbyte(0)
        end
-       return length
+       return length,buf
      else
-       return b
+       return b,buf
      end
     end
-  
-    def read_tag
-      b = 0
-      while b == 0 || b == 255
-        b = @data.slice!(0).getbyte(0)
+
+    def length_encode(length)
+      out = Numbin.numbin(length,0)
+      if out.length > 127
+       raise EncodingException,"Invalid length for BER Tlv #{length}"
+      elsif out.length > 1
+        out = (128 + out.length).chr + out
       end
-    
-      tag = b.chr
-      
-      if b & 0x1F == 0x1F
-        nb = 0x80
-        while nb & 0x80 == 0x80
-          nb = @data.slice!(0).getbyte(0)
-    	    tag += nb.chr
-    	  end
-      end
-      return tag.unpack("H*").first.upcase
+      return out
     end
     
-    def read_value(length)
-      raise ErrorBufferUnderflow,"Not enough data for parsing BER TLV #{@id} length value #{length} remaining only #{@data.length}" if length > @data.length
-      value = @data[0,length]
-      @data = @data[length,@data.length]
-      return value.unpack("H*").first.upcase
+    def value_decode(buf,length)
+      if length > buf.length
+        raise ErrorBufferUnderflow,"Not enough data for parsing BER TLV 
+           #{@id} length value #{length} remaining only #{buf.length}"
+      end
+      value = buf[0,length]
+      buf = buf[length,buf.length]
+      return value.unpack("H*").first.upcase,buf
     end
   
+    def value_encode(unpack_buffer)
+      [unpack_buffer].pack("H*")
+    end
+    
     def build_field(buf,length)
       msg = Field.new(@id)
-      @data = buf[0,length]
-      while @data.length > 0
-        f = Field.new(read_tag)
-    	  f.set_value(read_value(read_length))
+      buffer = buf[0,length]
+      while buffer.length > 0
+        tag,buffer = tag_decode(buffer)
+        f = Field.new(tag)
+        value_length,buffer = length_decode(buffer)
+        value, buffer = value_decode(buffer,value_length)
+    	  f.set_value(value)
     	  msg.add_sub_field(f)
       end
       return msg
@@ -125,6 +153,24 @@ module Codec
   
     def decode(buffer)
       return build_field(buffer,buffer.length),""
+    end
+    
+    def encode(field)
+      out = ""
+      subfields = field.get_value
+      unless subfields.kind_of?(Array)
+        raise EncodingException, "Invalid field #{field.to_yaml} for BER Tlv encoding"
+      end
+      
+      while subfields.size > 0
+        subfield = subfields.shift
+        out += tag_encode(subfield.first)
+        # TODO : Handle value that is not String
+        value = value_encode(subfield.last.get_value)
+        out += length_encode(value.length)
+        out += value
+      end
+      return out
     end
   end
 end
