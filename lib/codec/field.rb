@@ -69,9 +69,34 @@ module Codec
 	  	get_sf_recursivly(path.split(separator))
 	  end
     
+    def set_node(value,new_value,path_ids)
+      is_set = false
+      value = value.collect{|id,val|
+        if id != path_ids.first
+         [id,val]
+        else
+          is_set = true
+          if path_ids.size == 1
+            [id,new_value]
+          else
+            [id,set_node(val,new_value,path_ids.slice(1,path_ids.size))]
+          end
+        end
+      }
+      unless is_set
+        if path_ids.size == 1
+          value << [path_ids.first,new_value]
+        else
+          value << [path_ids.first,set_node_rec([],new_value,
+            path_ids.slice(1,path_ids.size))]
+        end
+      end
+      return value      
+    end
+    
     def set_deep_field(sf,path,separator='.')
-      v = sf.value
-      # TODO : set v in good place in @value
+      @value = set_node(@value,sf.value,path.split(separator))
+      self
     end
 	  
     def get_sub_field(id)

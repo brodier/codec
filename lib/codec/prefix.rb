@@ -98,7 +98,7 @@ module Codec
       # TOFIX: No more working after field refactoring due 
       # => need to implement set_deep_field
       length_field.set_value(content.length)
-      # head_field.set_deep_field(length_field,@path,@separator)
+      head_field.set_deep_field(length_field,@path,@separator)
       # encode header
       header =  @length_codec.encode(head_field)
       return header + content
