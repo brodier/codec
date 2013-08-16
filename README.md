@@ -1,6 +1,9 @@
 # Codec
 
-TODO: Write a gem description
+Codec is a toolkit to build object that can decode a stream to a generic field tree
+object or encode a generic field tree object to a binary string buffer
+
+[![Gem Version](https://badge.fury.io/rb/codec.png)](http://badge.fury.io/rb/codec)
 
 ## Installation
 
