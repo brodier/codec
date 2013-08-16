@@ -13,6 +13,10 @@ module Codec
       @value = value
     end
     
+    def empty?
+      return true if @value == ""
+    end
+    
     def self.from_array(id,fields_array)
       f = Field.new(id,fields_array)  
       return f
@@ -38,9 +42,13 @@ module Codec
       end
     end
     
-    def set_value(value)
-	    raise "Error can not set value that is instance of Array" if value.kind_of? Array
-      @value = value
+    def set_value(value,path = nil,separator =".")
+      if path.nil?
+  	    raise "Error can not set value that is instance of Array" if value.kind_of? Array
+        @value = value
+      else
+        @value = set_node(@value,value,path.split(separator))
+      end
       return self
     end
     
@@ -123,19 +131,7 @@ module Codec
         return sfs
       end
     end
-  
-   def to_yaml(tab="")
-     if @value.kind_of? Array
-	     s = tab + @id +": \n" 
-	     tab += "  "
-	     @value.each{|v|
-	       s += v.last.to_yaml(tab)
-	     }
-	     return s
-	   else
-	     tab + @id + ": " + @value.to_s + "\n"
-	   end
-   end
+
    attr_reader :id,:value   
   end
 end

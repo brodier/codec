@@ -4,13 +4,17 @@ module Codec
       ((length + 1) / 2)
     end
     
-    def eval_pck_length(field)
+    def get_length(field)
       if @length > 0
         return @length 
       else
         return field.get_value.to_s.length
       end
     end	
+    
+    def encode_with_length(field)
+      return get_length(field),encode(field)
+    end
     
     def decode_with_length(buf,length)
       l = eval_length(buf,get_pck_length(length))

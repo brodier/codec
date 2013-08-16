@@ -21,7 +21,20 @@ module Codec
       l = eval_length(buf,@length)
       return build_field(buf,l),buf[l,buf.length]
     end    
+
+    def encode(field)
+      return field.get_value
+    end
     
+    def encode_with_length(field)
+      buf = encode(field)
+      return buf.length, buf
+    end
+    
+    def get_length(field)
+      field.get_value.length
+    end
+
     def eval_length(buf,length)
 	    length = 0 if length.nil?
       if(length != 0)

@@ -13,7 +13,7 @@ describe Codec::Packed do
   end
   
   it "must retrieve field length" do
-    subject.eval_pck_length(@f_pck).must_equal(6)
+    subject.get_length(@f_pck).must_equal(6)
   end
 
 end

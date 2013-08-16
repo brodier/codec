@@ -43,8 +43,8 @@ module Codec
 	  end
     
     def encode(field)
-      val = @value_codec.encode(field)
-      length = @length_codec.encode(Field.new.set_value(val.length))
+      l, val = @value_codec.encode_with_length(field)
+      length = @length_codec.encode(Field.new.set_value(l))
       out = length + val
       return out
     end
@@ -87,18 +87,12 @@ module Codec
     
     def encode(field)
       # encode content
-      content = @value_codec.encode(field.get_sub_field(@value_codec.id))
+      content_field = field.get_sub_field(@value_codec.id)
+      length, content = @value_codec.encode_with_length(content_field)
       head_field = field.get_sub_field(@length_codec.id)
       length_field = head_field.get_deep_field(@path,@separator)
-      if length_field.nil?
-        raise EncodingException,"Length field #{@path} is not present in
-         header for encoding #{@id} => #{field.to_yaml}"
-      end
       # update length field in header
-      # TOFIX: No more working after field refactoring due 
-      # => need to implement set_deep_field
-      length_field.set_value(content.length)
-      head_field.set_deep_field(length_field,@path,@separator)
+      head_field.set_value(length,@path,@separator)
       # encode header
       header =  @length_codec.encode(head_field)
       return header + content

@@ -2,6 +2,9 @@ module Codec
   class Tlv < Prefixedlength
     def initialize(id,length,header,content)
       super(id,length,content)
+      unless  header.kind_of?(Codec::Base)
+        raise InitializeException," Invalid tag codec for Tlv class"
+      end
       @tag_codec = header
       @subCodecs = {}
     end
@@ -9,7 +12,7 @@ module Codec
     def decode_with_length(buf,length)
       l = eval_length(buf,length)
       f,r = decode(buf[0,l])
-      Logger.warn("Remain data in a tlv buffer :[#{r.unpack("H*").first}]") if r.length > 0
+      Logger.warn("Remain data in a tlv buffer :[#{r.unpack("H*").first}]") if r.nil? || r.length > 0
       return f,buf[l,buf.length]
     end
     
@@ -34,11 +37,13 @@ module Codec
       while(buffer.length > 0)
         begin
           tag,buffer = @tag_codec.decode(buffer)
-        rescue 
+        rescue => e
           val = Field.new("ERR")
-          val.set_value("Error on parsing tag for TLV with following data [#{buffer.unpack("H*").first}]")
+          val.set_value("[#{buffer.unpack("H*").first}]")
           msg.add_sub_field(val)
-          return msg
+          Logger.error("in #{@id} tlv codec: #{e.message}\n #{e.backtrace.join(10.chr)}")
+          Logger.error("Decoding failed for #{id} : #{msg.to_yaml}")
+          return msg,""
         end
         begin
           if @subCodecs[tag.get_value.to_s].nil?

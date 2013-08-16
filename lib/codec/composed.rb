@@ -10,6 +10,7 @@ module Codec
     end
     
     def encode(field)
+      return "" if field.empty?
       subfields = field.get_value
       composed_encoder = subfields.zip(@subCodecs).collect {|sf,sc|
         if sf.get_id != sc.first
