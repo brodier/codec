@@ -90,7 +90,7 @@ module Codec
       content_field = field.get_sub_field(@value_codec.id)
       length, content = @value_codec.encode_with_length(content_field)
       head_field = field.get_sub_field(@length_codec.id)
-      length_field = head_field.get_deep_field(@path,@separator)
+      raise EncodingException, "Missing header for encoding #{@id}" if head_field.empty?
       # update length field in header
       head_field.set_value(length,@path,@separator)
       # encode header

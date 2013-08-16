@@ -2,6 +2,7 @@ module Codec
   
   class NilField
     def nil? ; return true; end
+    def empty? ; return true; end
     def get_id ; "" ; end
     def get_value ; "" ;end
     def get_sf_recursivly id ; return self ; end
