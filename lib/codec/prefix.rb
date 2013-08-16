@@ -91,8 +91,8 @@ module Codec
       length, content = @value_codec.encode_with_length(content_field)
       head_field = field.get_sub_field(@length_codec.id)
       raise EncodingException, "Missing header for encoding #{@id}" if head_field.empty?
-      # update length field in header
-      head_field.set_value(length,@path,@separator)
+      # update length field in header if length !=0
+      head_field.set_value(length,@path,@separator) if length !=0
       # encode header
       header =  @length_codec.encode(head_field)
       return header + content
