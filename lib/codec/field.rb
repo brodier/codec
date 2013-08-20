@@ -27,6 +27,14 @@ module Codec
       (@id == other.id && @value == other.value)
     end
     
+    def eql?(other)
+      self == other
+    end
+    
+    def hash
+      @id.hash ^ @value.hash
+    end
+    
     def get_id ; @id; end
     
     def set_id id ; @id = id ; end
