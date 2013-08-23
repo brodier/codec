@@ -27,10 +27,17 @@ module Codec
   end
 
   class Numpck < Packed
-    def build_field(buf,length)
+    def decode_with_length(buf,length)
+      l = eval_length(buf,get_pck_length(length))
       f = Field.new(@id)
-      f.set_value(buf[0,length].unpack("H*").first.to_i)
-      return f
+      val = buf[0,l].unpack("H*").first
+      if @length.odd?
+        val = val[1,val.length]
+      else
+        val = val[1,val.length] if length.odd?
+      end
+      f.set_value(val.to_i)
+      return f,buf[l,buf.length]
     end
     
     def encode(field)
@@ -47,13 +54,17 @@ module Codec
   end
   
   class Strpck < Packed
-    def build_field(buf,length)
+    def decode_with_length(buf,length)
+      l = eval_length(buf,get_pck_length(length))
       f = Field.new(@id)
-      val = buf[0,length].unpack("H*").first
-      # TODO : handle odd length for packed field with prefixed length
-      val.chop! if @length.odd?
+      val = buf[0,l].unpack("H*").first
+      if @length.odd?
+        val.chop! 
+      else
+        val.chop! if length.odd?
+      end
       f.set_value(val)
-      return f
+      return f,buf[l,buf.length]
     end
     
     def encode(field)
@@ -68,5 +79,32 @@ module Codec
       return out
     end
   end
-
+  
+  class Nstpck < Packed
+    def decode_with_length(buf,length)
+      l = eval_length(buf,get_pck_length(length))
+      f = Field.new(@id)
+      val = buf[0,l].unpack("H*").first
+      if @length.odd?
+        val = val[1,val.length]
+      else
+        val = val[1,val.length] if length.odd?
+      end
+      f.set_value(val)
+      return f,buf[l,buf.length]
+    end
+    
+    def encode(field)
+      out = field.get_value
+      if @length > 0
+        out = out.rjust(@length,"0")
+        raise TooLongDataException if out.length > @length
+      end
+      l = out.length
+      out.prepend("0") if out.length.odd?
+      out = [out].pack("H*")
+      return out
+    end
+  end
+  
 end
