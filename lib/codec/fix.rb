@@ -1,4 +1,6 @@
 module Codec
+  include EightBitsEncoding
+  
   class Numbin < Base
     def build_field(buf,length)
       f = Field.new(@id)
@@ -36,7 +38,7 @@ module Codec
     end
   end
 
-  class Numasc < Base
+  class Numstr < Base
     def build_field(buf,length)
       f = Field.new(@id)
       f.set_value(buf[0,length].to_i)
@@ -53,6 +55,63 @@ module Codec
     end
   end
 
+  class Numasc < Numstr
+    # This class is a copy of Numstr class because UTF8 and ASCII 
+    # have the same encoding for digits number
+  end
+  
+  class Numebc < Base
+    def build_field(buf,length)
+      f = Field.new(@id)
+      f.set_value(EBCDIC_2_UTF8(buf[0,length]).to_i)
+      return f
+    end
+    
+    def encode(field)
+      out = field.get_value.to_s
+      if @length > 0
+        out = out.rjust(@length,"0")
+        raise TooLongDataException if out.length > @length
+      end
+      return UTF8_2_EBCDIC(out)
+    end
+    
+  end
+  
+  class Ebcdic < Base
+    def build_field(buf,length)
+      f = Field.new(@id)
+      f.set_value(EBCDIC_2_UTF8(buf[0,length]))
+      return f
+    end
+    
+    def encode(f)
+      out = f.get_value
+      if @length >  0
+        raise TooLongDataException if out.length > @length
+        out = out.ljust(@length," ")
+      end
+      return UTF8_2_EBCDIC(out)
+    end  
+  end
+  
+  class Ascii < Base
+    def build_field(buf,length)
+      f = Field.new(@id)
+      f.set_value(ASCII_2_UTF8(buf[0,length]))
+      return f
+    end
+    
+    def encode(f)
+      out = f.get_value
+      if @length >  0
+        raise TooLongDataException if out.length > @length
+        out = out.ljust(@length," ")
+      end
+      return UTF8_2_ASCII(out)
+    end    
+  end
+  
   class String < Base
     def build_field(buf,length)
       f = Field.new(@id)
