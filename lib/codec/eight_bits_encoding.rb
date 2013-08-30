@@ -13,7 +13,7 @@ module Codec
     ".gsub(/[^0-9a-fA-F]/i,'')].pack("H*")
     
     EBCDIC_ASCII = ["
-    000102037F097F7F7F7F600B0C0DOE0F101112133C0A087F18197F7F1C1D1E1F
+    000102037F097F7F7F7F600B0C0D0E0F101112133C0A087F18197F7F1C1D1E1F
     7F7F7F7F7F0A171B7F7F7F7F7F0506077F7F167F7F7F7F047F7F7F7F14157F1A
     207F7F7F7F7F7F7F7F7F5B2E3C282B21267F7F7F7F7F7F7F7F7F21242A293B5E
     2D2F7F7F7F7F7F7F7F7F7C2C255F3E3F7F7F7F7F7F7F7F7F7F603A2340273D22
@@ -31,7 +31,7 @@ module Codec
     EXT_UTF8_TO_ASC = Hash[UTF_8_EXTENTION.zip(ASCII_EXTENTION)]
     
     def self.UTF8_2_ASCII(buf)
-      buf.chars.each { |c| 
+      buf.chars.collect { |c| 
         if c.getbyte(0) < 128
           c
         elsif EXT_UTF8_TO_ASC[c].nil?
@@ -43,7 +43,7 @@ module Codec
     end
     
     def self.ASCII_2_UTF8(buf)
-      buf.bytes.each.collect { |b| 
+      buf.bytes.collect { |b| 
         if b < 128
           b.chr
         elsif EXT_ASC_TO_UTF8[b].nil?
@@ -55,11 +55,11 @@ module Codec
     end
     
     def self.EBCDIC_2_UTF8(buf)
-      ASCII_2_UTF8(buf.bytes.each.collect { |b| EBCDIC_ASCII.getbyte(b).chr }.join)
+      ASCII_2_UTF8(buf.bytes.collect { |b| EBCDIC_ASCII.getbyte(b).chr }.join)
     end
     
     def self.UTF8_2_EBCDIC(buf)
-      UTF8_2_ASCII(buf.bytes.each.collect { |b| EBCDIC_ASCII.getbyte(b).chr }.join)
+      UTF8_2_ASCII(buf).bytes.collect { |b| ASCII_EBCDIC.getbyte(b).chr }.join
     end
   end
 end

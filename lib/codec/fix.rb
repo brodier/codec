@@ -1,5 +1,4 @@
 module Codec
-  include EightBitsEncoding
   
   class Numbin < Base
     def build_field(buf,length)
@@ -63,7 +62,7 @@ module Codec
   class Numebc < Base
     def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(EBCDIC_2_UTF8(buf[0,length]).to_i)
+      f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf[0,length]).to_i)
       return f
     end
     
@@ -73,7 +72,7 @@ module Codec
         out = out.rjust(@length,"0")
         raise TooLongDataException if out.length > @length
       end
-      return UTF8_2_EBCDIC(out)
+      return EightBitsEncoding::UTF8_2_EBCDIC(out)
     end
     
   end
@@ -81,7 +80,7 @@ module Codec
   class Ebcdic < Base
     def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(EBCDIC_2_UTF8(buf[0,length]))
+      f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf[0,length]))
       return f
     end
     
@@ -91,14 +90,14 @@ module Codec
         raise TooLongDataException if out.length > @length
         out = out.ljust(@length," ")
       end
-      return UTF8_2_EBCDIC(out)
+      return EightBitsEncoding::UTF8_2_EBCDIC(out)
     end  
   end
   
   class Ascii < Base
     def build_field(buf,length)
       f = Field.new(@id)
-      f.set_value(ASCII_2_UTF8(buf[0,length]))
+      f.set_value(EightBitsEncoding::ASCII_2_UTF8(buf[0,length]))
       return f
     end
     
@@ -108,7 +107,7 @@ module Codec
         raise TooLongDataException if out.length > @length
         out = out.ljust(@length," ")
       end
-      return UTF8_2_ASCII(out)
+      return EightBitsEncoding::UTF8_2_ASCII(out)
     end    
   end
   
