@@ -24,7 +24,7 @@ module Codec
 		      f,remain = @value_codec.decode_with_length(buf,len)
 		    rescue => e
 		      Logger.error "Error in #{@id} decoder \n #{e.message}\n#{e.backtrace.join(10.chr)}"
-		      raise ParsingException, e.message
+		      raise ParsingException.new e.message
 		    end
         
         f.set_id(@id)
@@ -35,8 +35,8 @@ module Codec
 	  def build_field(buf,length)
 	    begin
 	      f,r = decode(buf[0,length])
-	    rescue ErrorBufferUnderflow => e
-	      raise ParsingException, e.message
+	    rescue BufferUnderflow => e
+	      raise ParsingException.new e.message
 	    end
 	    Logger.error "Error remain data in Prefixedlength" if r != ""
 	    return f
@@ -90,7 +90,7 @@ module Codec
       content_field = field.get_sub_field(@value_codec.id)
       length, content = @value_codec.encode_with_length(content_field)
       head_field = field.get_sub_field(@length_codec.id)
-      raise EncodingException, "Missing header for encoding #{@id}" if head_field.empty?
+      raise EncodingException.new "Missing header for encoding #{@id}" if head_field.empty?
       # update length field in header if length !=0
       head_field.set_value(length,@path,@separator) if length !=0
       # encode header
@@ -113,7 +113,7 @@ module Codec
     def decode(buffer)
       tag,buf = @tag_codec.decode(buffer)
       if @subCodecs[tag.get_value.to_s].nil?
-        raise ParsingException, "Unknown tag #{tag.get_value.to_s} for #{@id} decoder"
+        raise ParsingException.new "Unknown tag #{tag.get_value.to_s} for #{@id} decoder"
       end
       f,buf = @subCodecs[tag.get_value.to_s].decode(buf)
       f.set_id(tag.get_value.to_s)
@@ -124,7 +124,7 @@ module Codec
       head = Field.new(@tag_codec.id, field.get_id)
       out = @tag_codec.encode(head)
       if @subCodecs[field.get_id].nil?
-        raise EncodingException, "Unknown tag #{field.get_id} for #{@id} encoder"
+        raise EncodingException.new "Unknown tag #{field.get_id} for #{@id} encoder"
       end
       out += @subCodecs[field.get_id].encode(field)
       return out

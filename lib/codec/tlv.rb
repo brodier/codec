@@ -130,7 +130,7 @@ module Codec
     
     def value_decode(buf,length)
       if length > buf.length
-        raise ErrorBufferUnderflow,"Not enough data for parsing BER TLV 
+        raise BufferUnderflow.new "Not enough data for parsing BER TLV 
            #{@id} length value #{length} remaining only #{buf.length}"
       end
       value = buf[0,length]

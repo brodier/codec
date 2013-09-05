@@ -93,7 +93,7 @@ module Codec
   	      f = Field.new("ERR") 
   	      f.set_value(buf.unpack("H*").first)
   	      msg.add_sub_field(f)
-          raise ParsingException,msg.to_yaml + "\nError unknown field #{field_tag} : "
+          raise ParsingException.new "#{msg}\nError unknown field #{field_tag} : "
         end
       end
       return msg,buf
