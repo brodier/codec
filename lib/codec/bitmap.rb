@@ -1,8 +1,8 @@
 module Codec
   class Bitmap < Base
     NB_BITS_BY_BYTE = 8
-    def initialize(id,length)
-      super(id,length)
+    def initialize(length)
+      super(length)
       @num_extended_bitmaps=[]
       @subCodecs = {}
     end
@@ -10,71 +10,71 @@ module Codec
     def bitmap_length
       @length * NB_BITS_BY_BYTE
     end
+    
     def add_extended_bitmap(num_extention)
       @num_extended_bitmaps << num_extention.to_i
     end
     
-    def decodeBitmap(buffer,first_field_num)
-      fieldsList = []
-      
-      bitmapBuffer = buffer[0,@length].unpack("B*").first
-      buf = buffer[@length,buffer.length]
+    def decode_bitmap(buffer,first_field_num)
+      fields_ids = []
+      bitmap = buffer.slice!(0...@length).unpack("B*").first
       field_num = first_field_num
-      while(bitmapBuffer.length > 0)
-        fieldsList << field_num if bitmapBuffer.start_with?('1')
-        bitmapBuffer.slice!(0)
+      until(bitmap.empty?)
+        fields_ids << field_num if bitmap.slice!(0) == "1"
         field_num += 1
       end
-      return fieldsList, buf
+      return fields_ids
     end
     
-    def encode_bitmap(fields_list,bitmap_index)
-      offset = bitmap_index * bitmap_length
+    def encode_bitmap(buf,fields_list,bitmap_index)
+      offset_id = bitmap_index * bitmap_length + 1
       bitmap = ""
-      ((offset + 1)..(offset + bitmap_length)).each do |i|
+      (offset_id...(offset_id + bitmap_length)).each do |i|
         if fields_list.include?(i)
-          bitmap += "1"
+          bitmap << "1"
         else
-          bitmap += "0"
+          bitmap << "0"
         end
       end
-      return [bitmap].pack("B*")
+      buf << [bitmap].pack("B*")
     end
     
-    def encode(field)
+    def encode(buf, field)
+      initial_length = buf.length
       fields = field.get_value 
       encoded_fields = []
       fields_list = fields.collect{|sf| sf.get_id.to_i}
-      # Add field for bitmaps
-      bitmap_fields = @num_extended_bitmaps[0,(fields_list.last - 1) / bitmap_length]
-      fields_list +=  bitmap_fields
-      fields += bitmap_fields.collect {|id| Field.new(id)}
+      fields_list.sort!
+      nb_additionnal_bitmaps = (fields_list.last - 1) / bitmap_length
+      @num_extended_bitmaps[0..nb_additionnal_bitmaps].each{ |bitmap_field_id|
+        fields_list << bitmap_field_id
+        fields << Field.new(bitmap_field_id)
+      }
       fields.sort!{|a,b| a.get_id.to_i <=> b.get_id.to_i}
       # Encode first bitmap
-      out = encode_bitmap(fields_list,0)
-      bitmap_index = 1
+      bitmap_itt = 0
+      encode_bitmap(buf,fields_list,bitmap_itt)
       fields.each do |sf|
         codec = @subCodecs[sf.get_id]
         if @num_extended_bitmaps.include?(sf.get_id)
-          out += encode_bitmap(fields_list,bitmap_index)
-          bitmap_index += 1
+          bitmap_itt += 1
+          buf << encode_bitmap(buf, fields_list, bitmap_itt)
         elsif codec.nil?
           raise EncodingException, "unknown codec for subfield #{sf.get_id}"
         elsif encoded_fields.include?(sf.get_id.to_i)
           raise EncodingException, "Multiple subfield #{sf.get_id} is invalid for Codec::Bitmap"
         else
-          out += codec.encode(sf)
+          codec.encode(buf,sf)
         end
         encoded_fields << sf.get_id.to_i
       end
-      return out
+      return buf.length - initial_length      
     end
     
-    def decode(buffer)
-      msg = Field.new(@id)
+    def decode(buf,msg)
       field_num = 1
       # 1. read bitmap
-      fields_list,buf = decodeBitmap(buffer,field_num)
+      fields_list = decode_bitmap(buf,field_num)
       field_num += bitmap_length
       # 2. decode each field present
       while fields_list.length > 0
@@ -82,12 +82,12 @@ module Codec
         field_id = fields_list.slice!(0)
         field_tag = field_id.to_s
         if @num_extended_bitmaps.include?(field_id)
-          nextFields,buf = decodeBitmap(buf,field_num)
+          nextFields = decode_bitmap(buf,field_num)
           fields_list = fields_list + nextFields
         elsif @subCodecs[field_tag].respond_to?(:decode)
           Logger.debug "Parsing bitmap field #{field_tag}"
-          f,buf = @subCodecs[field_tag].decode(buf)
-          f.set_id(field_tag)
+          f = Field.new(field_tag)
+          @subCodecs[field_tag].decode(buf,f)
           msg.add_sub_field(f)
         else
   	      f = Field.new("ERR") 
@@ -96,7 +96,6 @@ module Codec
           raise ParsingException.new "#{msg}\nError unknown field #{field_tag} : "
         end
       end
-      return msg,buf
     end
   end
 end

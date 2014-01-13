@@ -1,21 +1,20 @@
 module Codec
   
   class Numbin < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
+    def build_field(buf,f,length)
       res = 0
-      buf[0,length].unpack("C*").each{ |ubyte|
+      buf.slice!(0...length).unpack("C*").each{ |ubyte|
         res *= 256
         res += ubyte
       }
       f.set_value(res)
-      return f
     end
     
-    def encode(field)
+    def encode(buf, field)
       val = field.get_value.to_i
       out = Numbin.numbin(val,@length)
-      return out
+      buf << out
+      return out.length
     end
     
     def self.numbin(number,maxlength)
@@ -38,19 +37,18 @@ module Codec
   end
 
   class Numstr < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
-      f.set_value(buf[0,length].to_i)
-      return f
+    def build_field(buf, f, length)
+      f.set_value(buf.slice!(0...length).to_i)
     end
     
-    def encode(field)
+    def encode(buf,field)
       out = field.get_value.to_s
       if @length > 0
         out = out.rjust(@length,"0")
         raise TooLongDataException if out.length > @length
       end
-      return out
+      buf << out
+      return out.length
     end
   end
 
@@ -60,89 +58,84 @@ module Codec
   end
   
   class Numebc < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
-      f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf[0,length]).to_i)
-      return f
+    def build_field(buf,f,length)
+      f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf.slice!(0...length)).to_i)
     end
     
-    def encode(field)
+    def encode(buf, field)
       out = field.get_value.to_s
       if @length > 0
         out = out.rjust(@length,"0")
         raise TooLongDataException if out.length > @length
       end
-      return EightBitsEncoding::UTF8_2_EBCDIC(out)
+      buf << EightBitsEncoding::UTF8_2_EBCDIC(out)
+      return out.length      
     end
     
   end
   
   class Ebcdic < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
-      f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf[0,length]))
-      return f
+    def build_field(buf, f, length)
+      f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf.slice!(0...length)))
     end
     
-    def encode(f)
+    def encode(buf, f)
       out = f.get_value
       if @length >  0
         raise TooLongDataException if out.length > @length
         out = out.ljust(@length," ")
       end
-      return EightBitsEncoding::UTF8_2_EBCDIC(out)
+      buf << EightBitsEncoding::UTF8_2_EBCDIC(out)
+      return out.length      
     end  
   end
   
   class Ascii < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
-      f.set_value(EightBitsEncoding::ASCII_2_UTF8(buf[0,length]))
-      return f
+    def build_field(buf, f, length)
+      f.set_value(EightBitsEncoding::ASCII_2_UTF8(buf.slice!(0...length)))
     end
     
-    def encode(f)
+    def encode(buf, f)
       out = f.get_value
       if @length >  0
         raise TooLongDataException if out.length > @length
         out = out.ljust(@length," ")
       end
-      return EightBitsEncoding::UTF8_2_ASCII(out)
+      buf << EightBitsEncoding::UTF8_2_ASCII(out)
+      return out.length      
     end    
   end
   
   
   class String < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
-      f.set_value(buf[0,length])
-      return f
+    def build_field(buf, f, length)
+      f.set_value(buf.slice!(0...length))
     end
     
-    def encode(f)
+    def encode(buf, f)
       out = f.get_value
       if @length >  0
         raise TooLongDataException if out.length > @length
         out = out.ljust(@length," ")
       end
-      return out
+      buf << out
+      return out.length
     end    
   end
 
   class Binary < Base
-    def build_field(buf,length)
-      f = Field.new(@id)
-      f.set_value(buf[0,length].unpack("H*").first.upcase)
-      return f
+    def build_field(buf, field, length)
+      field.set_value(buf.slice!(0...length).unpack("H*").first.upcase)
     end
     
-    def encode(f)
+    def encode(buf, f)
       out = [f.get_value].pack("H*")
       if @length >  0
         raise TooLongDataException if out.length > @length
         out = out.ljust(@length,0.chr)
       end
-      return out
+      buf << out
+      return out.length
     end 
   end
 
@@ -157,33 +150,30 @@ module Codec
       "5C9F535455565758595AF4F5F6F7F8F930313233343536373839FAFBFCFDFEFF"].pack("H*")
   
   class Numace < Numstr
-    def build_field(buf,length)
-      f = Field.new(@id)
-      
+    def build_field(buffer, f, length)
       data = ""
+      buf = buffer.slice!(0...length)
       # if buf to decode is in EBCDIC then convert buf in ASCII
-      if ( buf[0,length].unpack("C*").select{|c| c >= 128}.size > 0)
-        buf[0,length].unpack("C*").each { |c| data += EBCDIC_2_ASCII[c] }
+      if ( buf.unpack("C*").select{|c| c >= 128}.size > 0)
+        buf.unpack("C*").each { |c| data << EBCDIC_2_ASCII[c] }
       else
-        data = buf[0,length]
+        data = buf
       end
       f.set_value(data.to_i)
-      return f
     end
   end
 
   class Strace < String
-    def build_field(buf,length)
-      f = Field.new(@id)
+    def build_field(buffer, field, length)
       data = ""
+      buf = buffer.slice!(0...length)
       # if buf to decode is in EBCDIC then convert buf in ASCII
-      if ( buf[0,length].unpack("C*").select{|c| c >= 128}.size > 0)
-        buf[0,length].unpack("C*").each { |c| data += EBCDIC_2_ASCII[c] }
+      if ( buf.unpack("C*").select{|c| c >= 128}.size > 0)
+        buf.unpack("C*").each { |c| data += EBCDIC_2_ASCII[c] }
       else
-        data = buf[0,length]
+        data = buf
       end
       f.set_value(data)
-      return f
     end
   end
 end

@@ -1,60 +1,54 @@
 module Codec
   class Prefixedlength < Base
-    def initialize(id,length,content)
+    def initialize(length,content)
       # TODO : Check that value_codec has a null length attribute
       @length_codec = length
       @value_codec = content
-      @id = id
     end
 	
     def get_length(length_field)
     	length_field.get_value.to_i
     end
 	
-    def decode(buffer)
-      l, buf = @length_codec.decode(buffer)
-	    len = get_length(l)
+    def decode(buffer, f)
+      len_field = Field.new
+      @length_codec.decode(buffer,len_field)
+	    len = get_length(len_field)
 	    if len == 0
-	      f = Field.new
-		    f.set_id(@id)
-		    f.set_value(nil)
-		    return f,buf
+		    f.set_value("")
 	    else
 	      begin
-		      f,remain = @value_codec.decode_with_length(buf,len)
+		      @value_codec.decode_with_length(buffer, f, len)
 		    rescue => e
-		      Logger.error "Error in #{@id} decoder \n #{e.message}\n#{e.backtrace.join(10.chr)}"
+		      Logger.error "Error when decoding field #{f.get_id} \n #{e.message}\n#{e.backtrace.join(10.chr)}"
 		      raise ParsingException.new e.message
 		    end
-        
-        f.set_id(@id)
-        return f,remain
 	    end
     end
 	
-	  def build_field(buf,length)
-	    begin
-	      f,r = decode(buf[0,length])
-	    rescue BufferUnderflow => e
-	      raise ParsingException.new e.message
-	    end
-	    Logger.error "Error remain data in Prefixedlength" if r != ""
-	    return f
+	  def build_field(buf, field, length)
+      decode(buf, field)
+	    Logger.error "Error remain data in Prefixedlength" unless buf.empty?
 	  end
     
-    def encode(field)
-      l, val = @value_codec.encode_with_length(field)
-      length = @length_codec.encode(Field.new.set_value(l))
-      out = length + val
-      return out
+    def encode(buf, field)
+      out = ""
+      content_buf = ""
+      len = @value_codec.encode(content_buf, field)
+      @length_codec.encode(out, Field.new.set_value(len))
+      out << content_buf
+      buf << out
+      return out.length
     end
   end
 
   class Headerlength < Prefixedlength
-    def initialize(id,header,content,length_path)
+    def initialize(header,header_id,content,content_id,length_path)
+      @header_id = header_id
+      @content_id = content_id
       @path = length_path # length attribute contain the path for length field in header
       @separator = @path.slice!(0).chr # first character contain the separator
-      super(id,header,content)
+      super(header,content)
     end
 	
 	  def get_length(header_field)
@@ -67,67 +61,73 @@ module Codec
 	  	end
 	  end
 
-	  def decode(buffer)
-	    f = Field.new
-	    f.set_id(@id)
-	    head, buf = @length_codec.decode(buffer)
-	    head.set_id(@length_codec.id)
+	  def decode(buffer, f)
+      initial_len = buffer.size
+      head = Field.new(@header_id)
+      content = Field.new(@content_id)
+	    @length_codec.decode(buffer,head)
+      h_len = initial_len - buffer.size
 	    f.add_sub_field(head)
 	    len = get_length(head)
-	    if len == 0
-	      return f,buf
-	    else
-        len -= (buffer.length - buf.length) if @header_length_include
-	      val,remain = @value_codec.decode_with_length(buf,len)
-        val.set_id(@value_codec.id)
-	  	  f.add_sub_field(val)
-        return f,remain
+	    if len > 0
+        len -= h_len if @header_length_include
+	      @value_codec.decode_with_length(buf, content, len)
+	  	  f.add_sub_field(content)
 	    end
 	  end
     
-    def encode(field)
+    def encode(buf, field)
       # encode content
-      content_field = field.get_sub_field(@value_codec.id)
-      length, content = @value_codec.encode_with_length(content_field)
-      head_field = field.get_sub_field(@length_codec.id)
-      raise EncodingException.new "Missing header for encoding #{@id}" if head_field.empty?
+      content_buf = ""
+      content = field.get_sub_field(@content_id)
+      length  = @value_codec.encode(content_buf, content)
+      head = field.get_sub_field(@header_id)
+      raise EncodingException.new "Missing header for encoding #{@id}" if head.empty?
       # update length field in header if length !=0
-      head_field.set_value(length,@path,@separator) if length !=0
+      head.set_value(length,@path,@separator) if length !=0
       # encode header
-      header =  @length_codec.encode(head_field)
-      return header + content
+      head_buf =  ""
+      h_len = @length_codec.encode(head_buf,head)
+      # TODO : optimize computation for header length 
+      if length != 0 && @header_length_include # re-encode header with total length
+        length = head_buf.length + content_buf.length
+        head.set_value(length,@path,@separator)
+        head_buf = ""
+        @length_codec.encode(head_buf,head)
+      end
+      buf << head_buf
+      buf << content_buf
+      return head_buf.length + content_buf.length
     end
   end  
-
-  class Headerfulllength < Headerlength
-    # TODO : to implement
-  end
   
   class Tagged < Base
-    def initialize(id,tag_codec)
+    def initialize(tag_codec,tag_id)
       @subCodecs = {}
       @tag_codec = tag_codec
-	    @id = id
+      @tag_id = tag_id
     end
     
-    def decode(buffer)
-      tag,buf = @tag_codec.decode(buffer)
+    def decode(buffer, field)
+      tag = Field.new(@tag_id)
+      @tag_codec.decode(buffer,tag)
+      field.set_id(tag.get_value.to_s)
       if @subCodecs[tag.get_value.to_s].nil?
-        raise ParsingException.new "Unknown tag #{tag.get_value.to_s} for #{@id} decoder"
+        raise ParsingException.new "Unknown tag #{tag.get_value.to_s} when decoding #{field.get_id}"
       end
-      f,buf = @subCodecs[tag.get_value.to_s].decode(buf)
-      f.set_id(tag.get_value.to_s)
-      return f,buf
+      @subCodecs[tag.get_value.to_s].decode(buffer,field)
     end
     
-    def encode(field)
-      head = Field.new(@tag_codec.id, field.get_id)
-      out = @tag_codec.encode(head)
+    def encode(buffer, field)
+      head = Field.new("tag", field.get_id)
+      out = ""
+      @tag_codec.encode(out, head)
       if @subCodecs[field.get_id].nil?
         raise EncodingException.new "Unknown tag #{field.get_id} for #{@id} encoder"
       end
-      out += @subCodecs[field.get_id].encode(field)
-      return out
+      @subCodecs[field.get_id].encode(out, field)
+      buffer << out
+      return out.length
     end
   end
 end

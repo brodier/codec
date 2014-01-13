@@ -1,92 +1,117 @@
 module Codec
   class Tlv < Prefixedlength
-    def initialize(id,length,header,content)
-      super(id,length,content)
-      unless  header.kind_of?(Codec::Base)
-        raise InitializeException," Invalid tag codec for Tlv class"
-      end
+    def initialize(length,header,content)
+      super(length,content)
       @tag_codec = header
       @subCodecs = {}
     end
     
-    def decode_with_length(buf,length)
+    def decode_with_length(buf, field, length)
       l = eval_length(buf,length)
-      f,r = decode(buf[0,l])
-      Logger.warn("Remain data in a tlv buffer :[#{r.unpack("H*").first}]") if r.nil? || r.length > 0
-      return f,buf[l,buf.length]
+      decode(buf.slice!(0...l), field)
+      Logger.warn("Remain data in a tlv buffer :[#{buf.unpack("H*").first}]") unless buf.empty? 
     end
     
-    def encode(field)
+    def encode(buf, field)
       out = ""
       fields = field.get_value
       fields.each do |sf|
-        out += @tag_codec.encode(Field.new('*',sf.get_id))
+        @tag_codec.encode(out, Field.new('*',sf.get_id))
         if @subCodecs[sf.get_id]
-          content = @subCodecs[sf.get_id].encode(sf)
-          length_buffer = @length_codec.encode(Field.new('*',content.length))
-          out += length_buffer + content
+          content = ""
+          len = @subCodecs[sf.get_id].encode(content, sf)
+          @length_codec.encode(out, Field.new('*',len))
+          out << content
         else
-          out += super(sf)
+          out << super(sf)
         end
       end
-      return out
+      buf << out
+      return out.length
     end
   
-    def decode(buffer)
-      msg = Field.new(@id)
-      while(buffer.length > 0)
-        begin
-          tag,buffer = @tag_codec.decode(buffer)
-        rescue => e
-          val = Field.new("ERR")
-          val.set_value("[#{buffer.unpack("H*").first}]")
-          msg.add_sub_field(val)
-          Logger.error("in #{@id} tlv codec: #{e.message}\n #{e.backtrace.join(10.chr)}")
-          Logger.error("Decoding failed for #{id} : #{msg.to_yaml}")
-          return msg,""
-        end
-        begin
-          if @subCodecs[tag.get_value.to_s].nil?
-            val,buffer = super(buffer)
+    def decode(buffer, msg)
+      tag = Field.new
+      begin
+        until buffer.empty?
+          @tag_codec.decode(buffer,tag)
+          sf = Field.new(tag.get_value.to_s)
+          subcodec = @subCodecs[tag.get_value.to_s]
+          if subcodec.nil?
+            super(buffer,sf)
           else
-            l,buf = @length_codec.decode(buffer)
-            val,buffer = @subCodecs[tag.get_value.to_s].decode_with_length(buf,l.get_value.to_i)
+            len_field = Field.new(len)
+            @length_codec.decode(buffer,len_field)
+            subcodec.decode_with_length(buf,sf,len_field.get_value.to_i)
           end
-        rescue BufferUnderflow => e
-          val = Field.new
-          val.set_value("Buffer underflow when parsing this tag : #{e.message} [#{buffer.unpack("H*").first}]")
-          buffer = ""
-        rescue 
-          val = Field.new
-          val.set_value("Parsing error [#{buffer.unpack("H*").first}]")
-          buffer = ""
+          msg.add_sub_field(sf)
         end
-        
-        val.set_id(tag.get_value.to_s)
-        msg.add_sub_field(val)
+      rescue BufferUnderflow => e
+        val = Field.new
+        val.set_value("Buffer underflow when parsing tlv #{msg.get_id} [#{buffer.unpack("H*").first}]")
+        buffer = ""
+      rescue 
+        msg.add_sub_field(Field.new("Err", "Parsing error [#{buffer.unpack("H*").first}]"))
       end
-      return msg,buffer
     end
   end
   
   class Bertlv < Base
-    def initialize(id)
-      @id = id
+  
+    def initialize
       @length = 0
     end
     
-    def tag_decode(buffer)
-      buf = buffer.dup
+    def build_field(buf, msg, length)
+      buffer = buf.slice!(0...length)
+      until buffer.empty?
+        tag = tag_decode(buffer)
+        len = len_decode(buffer)
+        sf = Field.new(tag.get_value)
+        sf.set_value(value_decode(buffer, len))
+    	  msg.add_sub_field(sf)
+      end
+    end
+  
+    def decode(buffer,field)
+      build_field(buffer, field, buffer.length)
+    end
+    
+    def encode(buf, field)
+      out = ""
+      subfields = field.get_value
+      unless subfields.kind_of?(Array)
+        raise EncodingException, "Invalid field #{field.to_yaml} for BER Tlv encoding"
+      end
+      
+      while subfields.size > 0
+        subfield = subfields.shift
+        out << tag_encode(subfield.get_id)
+        # TODO : Handle value that is not String
+        value = value_encode(subfield.get_value)
+        out << length_encode(value.length)
+        out << value
+      end
+      buf << out
+      return out.length
+    end
+    
+    private    
+    
+    def tag_decode(buf)
       # removing trailling bytes
-      begin ; b = buf.slice!(0).getbyte(0) ; end while (b == 0 || b == 255)
+      b = 0
+      while (b == 0 || b == 255)
+        b = buf.slice!(0).bytes.first
+      end 
       tag = b.chr
       if (b & 0x1F == 0x1F) 
         begin 
-          nb = buf.slice!(0).getbyte(0)
-    	    tag += nb.chr
+          nb = buf.slice!(0).bytes.first
+    	    tag << nb.chr
     	  end while nb & 0x80 == 0x80
       end
-      return tag.unpack("H*").first.upcase, buf
+      return tag.unpack("H*").first.upcase
     end
 
     def tag_encode(tag)
@@ -98,23 +123,22 @@ module Codec
       return buf
     end
     
-    def length_decode(buffer)
-     buf = buffer.dup
-     b = buf.slice!(0).getbyte(0)
+    def length_decode(buf)
+     b = buf.slice!(0).bytes.first
      if b & 0x80 == 0x80
-       # Compute lenght of encoding length sample if first byte is 83 then lenth is encode 
+       # Compute lenght of encoding length 
+       # Sample if first byte is 83 then lenth is encode 
        # on 3 bytes
        loencl = b & 0x7F 
-       lb = buf[0,loencl]
-       buf = buf[loencl,buf.length]
+       lb = buf.slice!(0...loencl)
        length = 0
-       while(lb.length > 0)
+       lb.bytes.each do |len_byte|
          length *= 256
-    	   length += lb.slice!(0).getbyte(0)
+    	   length += len_byte
        end
-       return length,buf
+       return length
      else
-       return b,buf
+       return b
      end
     end
 
@@ -123,59 +147,22 @@ module Codec
       if out.length > 127
        raise EncodingException,"Invalid length for BER Tlv #{length}"
       elsif out.length > 1
-        out = (128 + out.length).chr + out
+        out.prepend((128 + out.length).chr)
       end
       return out
     end
     
-    def value_decode(buf,length)
+    def value_decode(buf, length)
       if length > buf.length
         raise BufferUnderflow.new "Not enough data for parsing BER TLV 
            #{@id} length value #{length} remaining only #{buf.length}"
       end
-      value = buf[0,length]
-      buf = buf[length,buf.length]
-      return value.unpack("H*").first.upcase,buf
+      value = buf.slice!(0...length)
+      return value.unpack("H*").first.upcase
     end
   
     def value_encode(unpack_buffer)
       [unpack_buffer].pack("H*")
-    end
-    
-    def build_field(buf,length)
-      msg = Field.new(@id)
-      buffer = buf[0,length]
-      while buffer.length > 0
-        tag,buffer = tag_decode(buffer)
-        f = Field.new(tag)
-        value_length,buffer = length_decode(buffer)
-        value, buffer = value_decode(buffer,value_length)
-    	  f.set_value(value)
-    	  msg.add_sub_field(f)
-      end
-      return msg
-    end
-  
-    def decode(buffer)
-      return build_field(buffer,buffer.length),""
-    end
-    
-    def encode(field)
-      out = ""
-      subfields = field.get_value
-      unless subfields.kind_of?(Array)
-        raise EncodingException, "Invalid field #{field.to_yaml} for BER Tlv encoding"
-      end
-      
-      while subfields.size > 0
-        subfield = subfields.shift
-        out += tag_encode(subfield.get_id)
-        # TODO : Handle value that is not String
-        value = value_encode(subfield.get_value)
-        out += length_encode(value.length)
-        out += value
-      end
-      return out
     end
   end
 end
