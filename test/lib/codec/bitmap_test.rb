@@ -19,7 +19,8 @@ describe Codec::Bitmap do
   
   it "must generate composed field from buffer" do
     f = Codec::Field.new('Bitmap')
-    subject.decode(@buffer, f).first.must_equal(@field)
+    subject.decode(@buffer, f)
+    f.must_equal(@field)
   end
 
 end
@@ -48,18 +49,20 @@ describe Codec::Bitmap do
   
   it "must generate composed field from buffer with extended bitmap" do
     f1 = Codec::Field.new('test1')
-    subject.decode(@buffer_1,f1).first.must_equal(@field_1)
+    subject.decode(@buffer_1,f1)
+    f1.must_equal(@field_1)
   end
 
   it "must generate composed field from buffer without extended bitmap" do
     f2 = Codec::Field.new('test2')
-    subject.decode(@buffer_2,f2).first.must_equal(@field_2)
+    subject.decode(@buffer_2,f2)
+    f2.must_equal(@field_2)
   end
   
   it "must generate buffer from composed field" do
     buf1 = ""
     subject.encode(buf1, @field_1)
-    buf1.must_equal(@buffer_1)
+    buf1.unpack("H*").first.must_equal(@buffer_1.unpack("H*").first)
   end
 
   it "must raise Encoding exception if subfield is unknown" do

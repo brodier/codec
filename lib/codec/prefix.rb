@@ -43,11 +43,12 @@ module Codec
   end
 
   class Headerlength < Prefixedlength
-    def initialize(header,header_id,content,content_id,length_path)
+    def initialize(header,header_id,content,content_id,length_path,total_length = false)
       @header_id = header_id
       @content_id = content_id
       @path = length_path # length attribute contain the path for length field in header
       @separator = @path.slice!(0).chr # first character contain the separator
+      @total_length = total_length # indicate that length in header is equal to (header + content) length
       super(header,content)
     end
 	
@@ -70,8 +71,8 @@ module Codec
 	    f.add_sub_field(head)
 	    len = get_length(head)
 	    if len > 0
-        len -= h_len if @header_length_include
-	      @value_codec.decode_with_length(buf, content, len)
+        len -= h_len if @total_length
+	      @value_codec.decode_with_length(buffer, content, len)
 	  	  f.add_sub_field(content)
 	    end
 	  end
@@ -89,7 +90,7 @@ module Codec
       head_buf =  ""
       h_len = @length_codec.encode(head_buf,head)
       # TODO : optimize computation for header length 
-      if length != 0 && @header_length_include # re-encode header with total length
+      if length != 0 && @total_length # re-encode header with total length
         length = head_buf.length + content_buf.length
         head.set_value(length,@path,@separator)
         head_buf = ""
@@ -102,14 +103,13 @@ module Codec
   end  
   
   class Tagged < Base
-    def initialize(tag_codec,tag_id)
+    def initialize(tag_codec)
       @subCodecs = {}
       @tag_codec = tag_codec
-      @tag_id = tag_id
     end
     
     def decode(buffer, field)
-      tag = Field.new(@tag_id)
+      tag = Field.new("TAG")
       @tag_codec.decode(buffer,tag)
       field.set_id(tag.get_value.to_s)
       if @subCodecs[tag.get_value.to_s].nil?

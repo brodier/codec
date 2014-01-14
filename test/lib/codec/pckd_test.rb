@@ -45,7 +45,7 @@ describe "Packed rigth padded with F" do
     @bin_buffer = [@unpack_buffer + "F"].pack("H*")
     @fbin = Codec::Field.new
     @fbin.set_value(@unpack_buffer)
-    @f = Field.new
+    @f = Codec::Field.new
   end
   
   it "must generate a field with computed value" do

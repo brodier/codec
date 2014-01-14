@@ -1,5 +1,5 @@
 require_relative '../../test_helper'
- 
+
 describe Codec::Tlv do
   subject { Codec::Tlv.new(Codec::Numbin.new(1), 
               Codec::Binary.new(1), 
@@ -9,7 +9,7 @@ describe Codec::Tlv do
   before do
     @buffer = ["950580000000009C0100"].pack("H*")
     @field = Codec::Field.from_array('Tlv',[['95','8000000000'],['9C','00']])
-    @wf = Codec::Field.new
+    @wf = Codec::Field.new('Tlv')
   end
   
   it "must generate composed field from buffer" do
@@ -42,12 +42,14 @@ describe Codec::Tlv do
     @field = Codec::Field.from_array('Tlv',
       [['95',[['BIT1','80'],['BIT2','00'],['BIT3','00'],
        ['BIT4','00'],['BIT5','00']]],['9C','00']])
-    @wf = Codec::Field.new
+    @wf = Codec::Field.new('Tlv')
   end
 
   it "must generate composed field from buffer" do
+    Codec::Logger.debug {"====== start failing test =========\n"}
     subject.decode(@buffer,@wf)
     @wf.must_equal(@field)
+    Codec::Logger.debug {"====== end failing test =========\n"}
   end
 
   it "must generate buffer from composed field" do
@@ -68,7 +70,7 @@ describe Codec::Tlv do
       @buffer = ["9501009C010181020200"].pack("H*")
       @field = Codec::Field.from_array('TAG',
         [['95',0],['9C',1],['81',512]])
-      @wf = Codec::Field.new
+      @wf = Codec::Field.new('TAG')
     end
     
     it "must decode TLV buffer to field" do
@@ -87,7 +89,7 @@ describe Codec::Bertlv do
   subject { Codec::Bertlv.new }
   
   before do
-    @wf = Codec::Field.new
+    @wf = Codec::Field.new('Bertlv')
     @tlv_buf = ["9F100A0102030405060708091095058000000000"].pack("H*")
     @field = Codec::Field.from_array('Bertlv',
               [['9F10','01020304050607080910'],['95','8000000000']])

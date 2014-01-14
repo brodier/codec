@@ -13,13 +13,13 @@ describe Codec::Numbin do
   end
   
   it "must generate a field with computed value" do
-    f = Field.new
+    f = Codec::Field.new
     subject.decode(["00000100"].pack("H*"),f)
     f.get_value.to_i.must_equal(256)
   end
   
   it "remaining buffer must be empty" do
-    f = Field.new
+    f = Codec::Field.new
     buf = ["00000100"].pack("H*")
     subject.decode(buf,f)
     buf.must_be_empty

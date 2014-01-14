@@ -66,20 +66,20 @@ describe Codec::CompleteComposed do
   end
   
   it "must generate a field with computed value" do
-    f = Field.new("CompleteComposed")
+    f = Codec::Field.new("CompleteComposed")
     subject.decode(@buffer_1,f)
     f.must_equal(@field_1)
   end
   
   it "must handle remaining data" do
     buf = @buffer_1
-    f = Field.new("CompleteComposed")
+    f = Codec::Field.new("CompleteComposed")
     subject.decode(buf, f)
     buf.must_equal("123")
   end
  
   it "must raise BufferUnderflow if missing field" do
-    f = Field.new("CompleteComposed")
+    f = Codec::Field.new("CompleteComposed")
     proc { subject.decode(@buffer_3,f) }.must_raise(Codec::BufferUnderflow)
   end
   

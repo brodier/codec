@@ -4,9 +4,9 @@ module Codec
       @subCodecs = {}
     end
     
-    def decode(buf,field)
+    def decode(buf,msg)
       @subCodecs.each{|id,codec|
-        Logger.debug "Parsing struct field #{msg.get_id} - #{id}"
+        Logger.debug "Parsing struct field #{msg.get_id} - #{id} with [#{buf.unpack("H*").first}]"
   	    if buf.empty?
           Logger.debug "Not enough data to decode #{msg.get_id} : #{id}"
         else
@@ -34,19 +34,21 @@ module Codec
     end
     
     def build_field(buf,msg,length)
-      decode(buf.slice!(length), msg)
-      unless buf.empty?
+      Logger.debug {"build composed for [#{buf.unpack("H*").first}] on #{length} bytes for #{msg.get_id} field"}
+      composed_buf = buf.slice!(0...length)
+      decode(composed_buf, msg)
+      unless composed_buf.empty?
         f = Field.new("PADDING")
-        f.set_value(buf.unpack("H*").first)
-        field.add_sub_field(f)
+        f.set_value(composed_buf.unpack("H*").first)
+        msg.add_sub_field(f)
       end
     end
 
   end
   
   class CompleteComposed < BaseComposed
-    def build_field(buf,field,length)
-      super(buf,field,length)
+    def decode(buf,field)
+      super(buf,field)
       # Check if all struct's fields have been parsed
       if field.get_value.size < @subCodecs.size 
         raise BufferUnderflow, "Not enough data for parsing Struct #{@id}" 

@@ -24,7 +24,7 @@ module Codec
       val = buf.slice!(0...l).unpack("H*").first
       # remove padding if odd length
       ( @lPad ? val.chop! : val.slice!(0) ) if @length.odd? || length.odd?
-      val = val.to_i if @isNumeric
+      val = val.to_i if @isNum
       f.set_value(val)
     end
     
@@ -34,6 +34,7 @@ module Codec
 
     def encode(buf, field)
       out = field.get_value.to_s
+      Logger.debug{ "Encode packed #{out} on #{@length} [#{@isNum}|#{@fPad}|#{@lPad}]" }
       padding = (@fPad ? "F" : "0")
       if @length > 0
         out = (@lPad ? out.ljust(@length,padding) : out.rjust(@length,padding))
@@ -41,7 +42,8 @@ module Codec
       end
       l = out.length
       # handle padding if odd length
-      (@lPad ? out.prepend(padding) : out << padding) if out.length.odd?
+      (@lPad ? out << padding : out.prepend(padding) )if out.length.odd?
+      Logger.debug{ "before packing : #{out}" }
       out = [out].pack("H*")
       buf << out
       return l

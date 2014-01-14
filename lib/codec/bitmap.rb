@@ -36,17 +36,23 @@ module Codec
           bitmap << "0"
         end
       end
+      Logger.debug { "Encoding bitmap #{bitmap_index} 
+        form #{offset_id} to #{offset_id + bitmap_length - 1} 
+        with #{fields_list.collect{|id| id.to_s}.join(',')}
+        result #{bitmap}" }
       buf << [bitmap].pack("B*")
     end
     
     def encode(buf, field)
+      Logger.debug { "Start bitmap encoding\n" }
       initial_length = buf.length
       fields = field.get_value 
       encoded_fields = []
       fields_list = fields.collect{|sf| sf.get_id.to_i}
       fields_list.sort!
       nb_additionnal_bitmaps = (fields_list.last - 1) / bitmap_length
-      @num_extended_bitmaps[0..nb_additionnal_bitmaps].each{ |bitmap_field_id|
+      @num_extended_bitmaps[0...nb_additionnal_bitmaps].each{ |bitmap_field_id|
+        Logger.debug{"adding bitmap = #{bitmap_field_id}\n"}
         fields_list << bitmap_field_id
         fields << Field.new(bitmap_field_id)
       }
@@ -58,7 +64,7 @@ module Codec
         codec = @subCodecs[sf.get_id]
         if @num_extended_bitmaps.include?(sf.get_id)
           bitmap_itt += 1
-          buf << encode_bitmap(buf, fields_list, bitmap_itt)
+          encode_bitmap(buf, fields_list, bitmap_itt)
         elsif codec.nil?
           raise EncodingException, "unknown codec for subfield #{sf.get_id}"
         elsif encoded_fields.include?(sf.get_id.to_i)

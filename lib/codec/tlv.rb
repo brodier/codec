@@ -23,7 +23,7 @@ module Codec
           @length_codec.encode(out, Field.new('*',len))
           out << content
         else
-          out << super(sf)
+          super(out, sf)
         end
       end
       buf << out
@@ -35,23 +35,29 @@ module Codec
       begin
         until buffer.empty?
           @tag_codec.decode(buffer,tag)
+          Logger.debug { "Decoding tag #{tag.get_value.to_s}"}
           sf = Field.new(tag.get_value.to_s)
           subcodec = @subCodecs[tag.get_value.to_s]
           if subcodec.nil?
+            Logger.debug { "using default codec for tag #{tag.get_value.to_s}"}
             super(buffer,sf)
           else
-            len_field = Field.new(len)
+            Logger.debug { "using predefined codec for tag #{tag.get_value.to_s}"}
+            len_field = Field.new("len")
             @length_codec.decode(buffer,len_field)
-            subcodec.decode_with_length(buf,sf,len_field.get_value.to_i)
+            subcodec.decode_with_length(buffer,sf,len_field.get_value.to_i)
           end
+          Logger.debug { "Add field #{sf} to tlv"}
           msg.add_sub_field(sf)
         end
       rescue BufferUnderflow => e
+        Logger.info "TLV decoding BufferUnderflow"
         val = Field.new
         val.set_value("Buffer underflow when parsing tlv #{msg.get_id} [#{buffer.unpack("H*").first}]")
         buffer = ""
-      rescue 
-        msg.add_sub_field(Field.new("Err", "Parsing error [#{buffer.unpack("H*").first}]"))
+      #rescue
+      #  Logger.error "TLV decoding error"
+      #  msg.add_sub_field(Field.new("Err", "Parsing error [#{buffer.unpack("H*").first}]"))
       end
     end
   end
@@ -65,10 +71,9 @@ module Codec
     def build_field(buf, msg, length)
       buffer = buf.slice!(0...length)
       until buffer.empty?
-        tag = tag_decode(buffer)
-        len = len_decode(buffer)
-        sf = Field.new(tag.get_value)
-        sf.set_value(value_decode(buffer, len))
+        sf = Field.new(tag_decode(buffer))
+        val = value_decode(buffer, length_decode(buffer))
+        sf.set_value(val)
     	  msg.add_sub_field(sf)
       end
     end
@@ -116,11 +121,12 @@ module Codec
 
     def tag_encode(tag)
       buf = [tag].pack("H*")
-      check_tag, remain = tag_decode(buf)
-      if tag != check_tag || remain != ""
+      pack_tag = buf.dup
+      check_tag = tag_decode(buf)
+      unless tag == check_tag && buf.empty?
         raise EncodingException, "Invalid BER tag [#{tag}]"
       end
-      return buf
+      return pack_tag
     end
     
     def length_decode(buf)
