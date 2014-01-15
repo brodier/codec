@@ -14,4 +14,12 @@ require 'codec/tlv'
 
 module Codec
   # TODO : here implements Module constants and methods
+  
+  # method use to log deprecation warning
+  def self.deprecated(msg)
+    stack = Kernel.caller
+    stack.shift
+    Logger.warn "DEPRECATED: #{msg} | Call stack :
+    #{stack.select{|l| l =~ /codec\/lib/}.each{|l| l}.join("\n")}"
+  end
 end

@@ -2,7 +2,7 @@ module Codec
   class Bitmap < Base
     NB_BITS_BY_BYTE = 8
     def initialize(length)
-      super(length)
+      @length=length
       @num_extended_bitmaps=[]
       @subCodecs = {}
     end
@@ -75,6 +75,11 @@ module Codec
         encoded_fields << sf.get_id.to_i
       end
       return buf.length - initial_length      
+    end
+    
+    def decode(buf,msg, length)
+      buf = buf.slice!(0...length) if length && length > 0
+      decode(buf,msg)
     end
     
     def decode(buf,msg)

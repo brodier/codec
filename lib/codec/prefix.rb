@@ -26,7 +26,7 @@ module Codec
 	    end
     end
 	
-	  def build_field(buf, field, length)
+	  def decode_with_length(buf, field, length)
       decode(buf, field)
 	    Logger.error "Error remain data in Prefixedlength" unless buf.empty?
 	  end
@@ -61,7 +61,12 @@ module Codec
 	  	  length_field.get_value.to_i
 	  	end
 	  end
-
+	  
+    def decode_with_length(buf, msg, length)
+      buf = buf.slice!(0...length) if length && length > 0
+      decode(buf,msg)    
+    end
+    
 	  def decode(buffer, f)
       initial_len = buffer.size
       head = Field.new(@header_id)
@@ -107,6 +112,11 @@ module Codec
       @subCodecs = {}
       @tag_codec = tag_codec
     end
+    
+    def decode_with_length(buf, msg, length)
+      buf = buf.slice!(0...length) if length && length > 0
+      decode(buf,msg)    
+    end    
     
     def decode(buffer, field)
       tag = Field.new("TAG")

@@ -5,10 +5,23 @@ module Codec
       @tag_codec = header
       @subCodecs = {}
     end
+
+    def check_length(buf,length)
+	    raise "Length is nil" if length.nil?
+      if(length != 0)
+	      if buf.length < length
+	        raise BufferUnderflow, "Not enough data for decoding (#{length}/#{buf.length})"
+	      end
+        return length
+      else
+        return buf.length
+      end    
+    end
     
     def decode_with_length(buf, field, length)
-      l = eval_length(buf,length)
-      decode(buf.slice!(0...l), field)
+      l = check_length(buf,length)
+      buf = buf.slice!(0...l)
+      decode(buf, field)
       Logger.warn("Remain data in a tlv buffer :[#{buf.unpack("H*").first}]") unless buf.empty? 
     end
     
@@ -68,7 +81,7 @@ module Codec
       @length = 0
     end
     
-    def build_field(buf, msg, length)
+    def decode_with_length(buf, msg, length)
       buffer = buf.slice!(0...length)
       until buffer.empty?
         sf = Field.new(tag_decode(buffer))
@@ -79,7 +92,7 @@ module Codec
     end
   
     def decode(buffer,field)
-      build_field(buffer, field, buffer.length)
+      decode_with_length(buffer, field, buffer.length)
     end
     
     def encode(buf, field)

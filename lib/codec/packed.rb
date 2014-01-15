@@ -18,9 +18,21 @@ module Codec
         return field.get_value.to_s.length
       end
     end	
+
+    def check_length(buf,length)
+	    raise "Length is nil" if length.nil?
+      if(length != 0)
+	      if buf.length < length
+	        raise BufferUnderflow, "Not enough data for decoding (#{length}/#{buf.length})"
+	      end
+        return length
+      else
+        return buf.length
+      end
+    end    
     
     def decode_with_length(buf, f, length)
-      l = eval_length(buf,get_pck_length(length))
+      l = check_length(buf,get_pck_length(length))
       val = buf.slice!(0...l).unpack("H*").first
       # remove padding if odd length
       ( @lPad ? val.chop! : val.slice!(0) ) if @length.odd? || length.odd?

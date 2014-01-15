@@ -1,6 +1,37 @@
 module Codec
-  
-  class Numbin < Base
+  class Fix < Base
+    
+    def initialize(length=nil)
+      @length = length || 0
+    end
+    
+    def check_length(buf,length)
+	    raise "Length is nil" if length.nil?
+      if(length != 0)
+	      if buf.length < length
+	        raise BufferUnderflow, "Not enough data for decoding (#{length}/#{buf.length})"
+	      end
+        return length
+      else
+        return buf.length
+      end    
+    end
+
+    def decode_with_length(buf,field,length)
+      l = check_length(buf,length)
+      wbuf = buf.slice!(0...l)
+      build_field(wbuf,field,l)    
+    end
+    
+    def decode(buf,field)
+      decode_with_length(buf,field,@length)
+    end
+    
+    def build_field(w,f,l)
+      raise "Abstract Codec : build field not defined for #{self.class.name}"
+    end
+  end
+  class Numbin < Fix
     def build_field(buf,f,length)
       res = 0
       buf.slice!(0...length).unpack("C*").each{ |ubyte|
@@ -36,7 +67,7 @@ module Codec
     end
   end
 
-  class Numstr < Base
+  class Numstr < Fix
     def build_field(buf, f, length)
       f.set_value(buf.slice!(0...length).to_i)
     end
@@ -57,7 +88,7 @@ module Codec
     # have the same encoding for digits number
   end
   
-  class Numebc < Base
+  class Numebc < Fix
     def build_field(buf,f,length)
       f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf.slice!(0...length)).to_i)
     end
@@ -74,7 +105,7 @@ module Codec
     
   end
   
-  class Ebcdic < Base
+  class Ebcdic < Fix
     def build_field(buf, f, length)
       f.set_value(EightBitsEncoding::EBCDIC_2_UTF8(buf.slice!(0...length)))
     end
@@ -90,7 +121,7 @@ module Codec
     end  
   end
   
-  class Ascii < Base
+  class Ascii < Fix
     def build_field(buf, f, length)
       f.set_value(EightBitsEncoding::ASCII_2_UTF8(buf.slice!(0...length)))
     end
@@ -107,7 +138,7 @@ module Codec
   end
   
   
-  class String < Base
+  class String < Fix
     def build_field(buf, f, length)
       f.set_value(buf.slice!(0...length))
     end
@@ -123,7 +154,7 @@ module Codec
     end    
   end
 
-  class Binary < Base
+  class Binary < Fix
     def build_field(buf, field, length)
       field.set_value(buf.slice!(0...length).unpack("H*").first.upcase)
     end

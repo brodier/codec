@@ -33,7 +33,7 @@ module Codec
       return buf.length - initial_length
     end
     
-    def build_field(buf,msg,length)
+    def decode_with_length(buf,msg,length)
       Logger.debug {"build composed for [#{buf.unpack("H*").first}] on #{length} bytes for #{msg.get_id} field"}
       composed_buf = buf.slice!(0...length)
       decode(composed_buf, msg)
