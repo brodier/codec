@@ -18,13 +18,6 @@ module Codec
       end    
     end
     
-    def decode_with_length(buf, field, length)
-      l = check_length(buf,length)
-      buf = buf.slice!(0...l)
-      decode(buf, field)
-      Logger.warn("Remain data in a tlv buffer :[#{buf.unpack("H*").first}]") unless buf.empty? 
-    end
-    
     def encode(buf, field)
       out = ""
       fields = field.get_value
@@ -42,8 +35,13 @@ module Codec
       buf << out
       return out.length
     end
-  
-    def decode(buffer, msg)
+    
+    def decode(buffer, msg, length = nil)
+      unless length.nil?
+        l = check_length(buffer,length)
+        buffer = buffer.slice!(0...l)
+      end
+      
       tag = Field.new
       begin
         until buffer.empty?
@@ -58,7 +56,7 @@ module Codec
             Logger.debug { "using predefined codec for tag #{tag.get_value.to_s}"}
             len_field = Field.new("len")
             @length_codec.decode(buffer,len_field)
-            subcodec.decode_with_length(buffer,sf,len_field.get_value.to_i)
+            subcodec.decode(buffer,sf,len_field.get_value.to_i)
           end
           Logger.debug { "Add field #{sf} to tlv"}
           msg.add_sub_field(sf)
@@ -72,6 +70,9 @@ module Codec
       #  Logger.error "TLV decoding error"
       #  msg.add_sub_field(Field.new("Err", "Parsing error [#{buffer.unpack("H*").first}]"))
       end
+      unless buffer.empty? || length.nil?
+        Logger.warn("Remain data in a tlv buffer :[#{buffer.unpack("H*").first}]") 
+      end
     end
   end
   
@@ -80,8 +81,9 @@ module Codec
     def initialize
       @length = 0
     end
-    
-    def decode_with_length(buf, msg, length)
+
+    def decode(buf,msg,length=nil)
+      length ||= buf.length
       buffer = buf.slice!(0...length)
       until buffer.empty?
         sf = Field.new(tag_decode(buffer))
@@ -89,10 +91,6 @@ module Codec
         sf.set_value(val)
     	  msg.add_sub_field(sf)
       end
-    end
-  
-    def decode(buffer,field)
-      decode_with_length(buffer, field, buffer.length)
     end
     
     def encode(buf, field)

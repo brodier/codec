@@ -10,7 +10,8 @@ module Codec
     	length_field.get_value.to_i
     end
 	
-    def decode(buffer, f)
+    def decode(buffer, f, length=nil)
+      Logger.warn {"Call decode with length on Prefixedlength codec should never happen"} unless length.nil?
       len_field = Field.new
       @length_codec.decode(buffer,len_field)
 	    len = get_length(len_field)
@@ -18,18 +19,13 @@ module Codec
 		    f.set_value("")
 	    else
 	      begin
-		      @value_codec.decode_with_length(buffer, f, len)
+		      @value_codec.decode(buffer, f, len)
 		    rescue => e
 		      Logger.error "Error when decoding field #{f.get_id} \n #{e.message}\n#{e.backtrace.join(10.chr)}"
 		      raise ParsingException.new e.message
 		    end
 	    end
     end
-	
-	  def decode_with_length(buf, field, length)
-      decode(buf, field)
-	    Logger.error "Error remain data in Prefixedlength" unless buf.empty?
-	  end
     
     def encode(buf, field)
       out = ""
@@ -61,13 +57,9 @@ module Codec
 	  	  length_field.get_value.to_i
 	  	end
 	  end
-	  
-    def decode_with_length(buf, msg, length)
-      buf = buf.slice!(0...length) if length && length > 0
-      decode(buf,msg)    
-    end
     
-	  def decode(buffer, f)
+	  def decode(buffer, f, length=nil)
+      buffer = buffer.slice!(0...length) if length && length > 0
       initial_len = buffer.size
       head = Field.new(@header_id)
       content = Field.new(@content_id)
@@ -77,7 +69,7 @@ module Codec
 	    len = get_length(head)
 	    if len > 0
         len -= h_len if @total_length
-	      @value_codec.decode_with_length(buffer, content, len)
+	      @value_codec.decode(buffer, content, len)
 	  	  f.add_sub_field(content)
 	    end
 	  end
@@ -112,13 +104,9 @@ module Codec
       @subCodecs = {}
       @tag_codec = tag_codec
     end
-    
-    def decode_with_length(buf, msg, length)
-      buf = buf.slice!(0...length) if length && length > 0
-      decode(buf,msg)    
-    end    
-    
-    def decode(buffer, field)
+
+    def decode(buffer, field, length = nil)
+      buffer = buffer.slice!(0...length) if length && length > 0
       tag = Field.new("TAG")
       @tag_codec.decode(buffer,tag)
       field.set_id(tag.get_value.to_s)

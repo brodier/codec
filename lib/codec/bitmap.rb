@@ -76,13 +76,9 @@ module Codec
       end
       return buf.length - initial_length      
     end
-    
-    def decode(buf,msg, length)
+
+    def decode(buf,msg, length=nil)
       buf = buf.slice!(0...length) if length && length > 0
-      decode(buf,msg)
-    end
-    
-    def decode(buf,msg)
       field_num = 1
       # 1. read bitmap
       fields_list = decode_bitmap(buf,field_num)

@@ -16,15 +16,12 @@ module Codec
         return buf.length
       end    
     end
-
-    def decode_with_length(buf,field,length)
+    
+    def decode(buf,field,length=nil)
+      length ||= @length
       l = check_length(buf,length)
       wbuf = buf.slice!(0...l)
       build_field(wbuf,field,l)    
-    end
-    
-    def decode(buf,field)
-      decode_with_length(buf,field,@length)
     end
     
     def build_field(w,f,l)

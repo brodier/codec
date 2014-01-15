@@ -31,18 +31,14 @@ module Codec
       end
     end    
     
-    def decode_with_length(buf, f, length)
+    def decode(buf,f, length = nil)
+      length ||= @length
       l = check_length(buf,get_pck_length(length))
       val = buf.slice!(0...l).unpack("H*").first
       # remove padding if odd length
       ( @lPad ? val.chop! : val.slice!(0) ) if @length.odd? || length.odd?
       val = val.to_i if @isNum
-      f.set_value(val)
-    end
-    
-    def decode(buf,field)
-      decode_with_length(buf, field, @length)
-    end
+      f.set_value(val)    end
 
     def encode(buf, field)
       out = field.get_value.to_s
