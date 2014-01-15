@@ -1,15 +1,16 @@
 require_relative '../../test_helper'
  
-describe Codec::Packed do
-  subject { Codec::Packed.new(6) }
-
-  it "must retrieve field length" do
-    f_pck = Codec::Field.new
-    f_pck.set_value(123)  
-    subject.get_length(@f_pck).must_equal(6)
-  end
-
-end
+# No more required encode return the field length for upper codec layer
+# describe Codec::Packed do
+#   subject { Codec::Packed.new(6) }
+# 
+#   it "must retrieve field length" do
+#     f_pck = Codec::Field.new
+#     f_pck.set_value(123)  
+#     subject.get_length(@f_pck).must_equal(6)
+#   end
+# 
+# end
 
 describe "Numeric packed" do
   subject { Codec::Packed.new(5) }

@@ -1,6 +1,7 @@
 module Codec
   class BaseComposed < Base
-    def initialize
+    def initialize(isComplete = false)
+      @is_complete = isComplete
       @subCodecs = {}
     end
     
@@ -24,10 +25,20 @@ module Codec
         f = Field.new("PADDING")
         f.set_value(composed_buf.unpack("H*").first)
         msg.add_sub_field(f)
+      end
+      
+      # Check if all struct's fields have been parsed
+      if @is_complete && msg.get_value.size < @subCodecs.size 
+        raise BufferUnderflow, "Not enough data for parsing Struct #{msg.get_id}" 
       end      
     end
     
     def encode(buf, field)
+
+      if @is_complete && @subCodecs.size != field.get_value.size
+        raise EncodingException, "Not enough subfields to encode #{field.get_id}"
+      end
+      
       return if field.empty?
       initial_length = buf.length
       subfields = field.get_value
@@ -41,24 +52,6 @@ module Codec
         subcodec.encode(buf,subfield)
       end
       return buf.length - initial_length
-    end
-
-  end
-  
-  class CompleteComposed < BaseComposed
-    def decode(buf,field,length=nil)
-      super(buf,field,length)
-      # Check if all struct's fields have been parsed
-      if field.get_value.size < @subCodecs.size 
-        raise BufferUnderflow, "Not enough data for parsing Struct #{@id}" 
-      end
-    end
-    
-    def encode(buf, field)
-      if @subCodecs.size != field.get_value.size
-        raise EncodingException, "Not enough subfields to encode #{@id}"
-      end
-      super(buf, field)
     end
   end
 end

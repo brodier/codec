@@ -7,17 +7,14 @@ module Codec
       @lPad = isLeftPadded
     end
     
-    def get_pck_length(length)
-      ((length + 1) / 2)
-    end
-    
-    def get_length(field)
-      if @length > 0
-        return @length 
-      else
-        return field.get_value.to_s.length
-      end
-    end	
+    # No more required encode return the field length for upper codec layer
+    # def get_length(field)
+    #   if @length > 0
+    #     return @length 
+    #   else
+    #     return field.get_value.to_s.length
+    #   end
+    # end	
 
     def check_length(buf,length)
 	    raise "Length is nil" if length.nil?
@@ -33,12 +30,13 @@ module Codec
     
     def decode(buf,f, length = nil)
       length ||= @length
-      l = check_length(buf,get_pck_length(length))
+      l = check_length(buf,(length + 1) / 2)
       val = buf.slice!(0...l).unpack("H*").first
       # remove padding if odd length
       ( @lPad ? val.chop! : val.slice!(0) ) if @length.odd? || length.odd?
       val = val.to_i if @isNum
-      f.set_value(val)    end
+      f.set_value(val)   
+    end
 
     def encode(buf, field)
       out = field.get_value.to_s

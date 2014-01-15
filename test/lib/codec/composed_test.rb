@@ -45,8 +45,8 @@ describe Codec::BaseComposed do
   end
 end
 
-describe Codec::CompleteComposed do
-  subject { Codec::CompleteComposed.new }
+describe Codec::BaseComposed do
+  subject { Codec::BaseComposed.new(true) }
 
   before do
     test_1 = [['CHP1',Codec::Numasc.new(3),12],
@@ -59,10 +59,6 @@ describe Codec::CompleteComposed do
     @buffer_2 = "012ABCDEWXYZ"
     @buffer_3 = "012ABCDE"
     @field_2 = Codec::Field.from_array('CompleteComposed',field_array[0,2])
-  end
- 
-  it "must be a CompleteComposed codec" do
-    subject.must_be_instance_of(Codec::CompleteComposed)
   end
   
   it "must generate a field with computed value" do
