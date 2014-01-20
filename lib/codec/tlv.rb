@@ -45,7 +45,11 @@ module Codec
       tag = Field.new
       begin
         until buffer.empty?
-          @tag_codec.decode(buffer,tag)
+          begin
+            @tag_codec.decode(buffer,tag)
+          rescue
+            raise ParsingException, "Tlv Codec still remaining data but failed to decode tag when decoding field #{msg.get_id}"
+          end
           Logger.debug { "Decoding tag #{tag.get_value.to_s}"}
           sf = Field.new(tag.get_value.to_s)
           subcodec = @subCodecs[tag.get_value.to_s]
@@ -62,13 +66,10 @@ module Codec
           msg.add_sub_field(sf)
         end
       rescue BufferUnderflow => e
-        Logger.info "TLV decoding BufferUnderflow"
+        raise ParsingException, "Tlv Codec failed to decode field #{msg.get_id}"
         val = Field.new
         val.set_value("Buffer underflow when parsing tlv #{msg.get_id} [#{buffer.unpack("H*").first}]")
-        buffer = ""
-      #rescue
-      #  Logger.error "TLV decoding error"
-      #  msg.add_sub_field(Field.new("Err", "Parsing error [#{buffer.unpack("H*").first}]"))
+        buffer.clear
       end
       unless buffer.empty? || length.nil?
         Logger.warn("Remain data in a tlv buffer :[#{buffer.unpack("H*").first}]") 

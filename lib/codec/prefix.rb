@@ -77,8 +77,9 @@ module Codec
     def encode(buf, field)
       # encode content
       content_buf = ""
+      length = 0
       content = field.get_sub_field(@content_id)
-      length  = @value_codec.encode(content_buf, content)
+      length  = @value_codec.encode(content_buf, content) unless content.nil?
       head = field.get_sub_field(@header_id)
       raise EncodingException.new "Missing header for encoding #{@id}" if head.empty?
       # update length field in header if length !=0

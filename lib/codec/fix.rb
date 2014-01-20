@@ -178,7 +178,7 @@ module Codec
       "5C9F535455565758595AF4F5F6F7F8F930313233343536373839FAFBFCFDFEFF"].pack("H*")
   
   class Numace < Numstr
-    def build_field(buffer, f, length)
+    def build_field(buffer, field, length)
       data = ""
       buf = buffer.slice!(0...length)
       # if buf to decode is in EBCDIC then convert buf in ASCII
@@ -187,7 +187,7 @@ module Codec
       else
         data = buf
       end
-      f.set_value(data.to_i)
+      field.set_value(data.to_i)
     end
   end
 
@@ -201,7 +201,7 @@ module Codec
       else
         data = buf
       end
-      f.set_value(data)
+      field.set_value(data)
     end
   end
 end

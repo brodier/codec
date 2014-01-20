@@ -23,7 +23,7 @@ module Codec
       }
       unless buf.empty? || length.nil?
         f = Field.new("PADDING")
-        f.set_value(composed_buf.unpack("H*").first)
+        f.set_value(buf.unpack("H*").first)
         msg.add_sub_field(f)
       end
       
