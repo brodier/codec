@@ -59,6 +59,7 @@ module Codec
 	  end
     
 	  def decode(buffer, f, length=nil)
+      f.set_value("") # reinit field value
       buffer = buffer.slice!(0...length) if length && length > 0
       initial_len = buffer.size
       head = Field.new(@header_id)

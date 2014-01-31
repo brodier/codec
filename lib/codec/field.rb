@@ -63,7 +63,7 @@ module Codec
     
     def add_sub_field(sf)
       @value = [] if @value == ""
-	    raise "Add impossible on not Array valued field" unless @value.kind_of? Array
+	    raise "Add sub field impossible on #{@value.class} value class" unless @value.kind_of? Array
 	    @value << [sf.id,sf.value]
     end
     
